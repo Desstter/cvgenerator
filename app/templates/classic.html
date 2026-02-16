@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="{{ cv.detected_language }}">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Times New Roman', Georgia, serif;
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #000;
+  }
+  h1 {
+    font-size: 20pt;
+    text-align: center;
+    margin-bottom: 2px;
+  }
+  .contact-info {
+    text-align: center;
+    font-size: 10pt;
+    color: #333;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #000;
+  }
+  h2 {
+    font-size: 12pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #999;
+    padding-bottom: 2px;
+  }
+  .summary {
+    margin-bottom: 4px;
+    text-align: justify;
+  }
+  .entry { margin-bottom: 10px; }
+  .entry-title { font-weight: bold; }
+  .entry-company { font-style: italic; }
+  .entry-dates { font-style: italic; color: #444; float: right; }
+  .entry-desc { margin-top: 2px; padding-left: 20px; }
+  .entry-desc li { margin-bottom: 2px; }
+  .techs { font-size: 10pt; color: #444; padding-left: 20px; margin-top: 2px; }
+  .skill-matched { font-weight: bold; }
+  .clearfix { clear: both; }
+</style>
+</head>
+<body>
+  <h1>{{ cv.contact.name }}</h1>
+  <div class="contact-info">
+    {% set parts = [] %}
+    {% if cv.contact.email %}{% set _ = parts.append(cv.contact.email) %}{% endif %}
+    {% if cv.contact.phone %}{% set _ = parts.append(cv.contact.phone) %}{% endif %}
+    {% if cv.contact.location %}{% set _ = parts.append(cv.contact.location) %}{% endif %}
+    {% if cv.contact.linkedin %}{% set _ = parts.append(cv.contact.linkedin) %}{% endif %}
+    {% if cv.contact.website %}{% set _ = parts.append(cv.contact.website) %}{% endif %}
+    {{ parts | join(' | ') }}
+  </div>
+
+  {% if cv.summary %}
+  <h2>{{ "Resumen Profesional" if cv.detected_language == "es" else "Professional Summary" }}</h2>
+  <p class="summary">{{ cv.summary }}</p>
+  {% endif %}
+
+  {% if cv.experience %}
+  <h2>{{ "Experiencia Profesional" if cv.detected_language == "es" else "Professional Experience" }}</h2>
+  {% for exp in cv.experience %}
+  <div class="entry">
+    <div>
+      <span class="entry-dates">{{ exp.dates }}</span>
+      <span class="entry-title">{{ exp.title }}</span>{% if exp.company %}, <span class="entry-company">{{ exp.company }}</span>{% endif %}
+      <div class="clearfix"></div>
+    </div>
+    {% if exp.description %}
+    <ul class="entry-desc">
+      {% for line in exp.description.split('\n') %}
+        {% set clean = line.strip().lstrip('-•* ').strip() %}
+        {% if clean %}<li>{{ clean }}</li>{% endif %}
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if exp.technologies %}
+    <div class="techs">Technologies: {{ exp.technologies | join(', ') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.projects %}
+  <h2>{{ "Proyectos" if cv.detected_language == "es" else "Projects" }}</h2>
+  {% for proj in cv.projects %}
+  <div class="entry">
+    <div class="entry-title">{{ proj.name }}</div>
+    <p style="margin-top:2px;">{{ proj.description }}</p>
+    {% if proj.technologies %}
+    <div class="techs">Technologies: {{ proj.technologies | join(', ') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.education %}
+  <h2>{{ "Educación" if cv.detected_language == "es" else "Education" }}</h2>
+  {% for edu in cv.education %}
+  <div class="entry">
+    <div>
+      <span class="entry-dates">{{ edu.dates }}</span>
+      <span class="entry-title">{{ edu.degree }}</span>{% if edu.institution %}, <span class="entry-company">{{ edu.institution }}</span>{% endif %}
+      <div class="clearfix"></div>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.skills %}
+  <h2>{{ "Habilidades" if cv.detected_language == "es" else "Skills" }}</h2>
+  <p>
+    {% for skill in cv.skills %}{% if skill in matched_keywords %}<b>{{ skill }}</b>{% else %}{{ skill }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+  </p>
+  {% endif %}
+
+  {% if cv.certifications %}
+  <h2>{{ "Certificaciones" if cv.detected_language == "es" else "Certifications" }}</h2>
+  <p>{{ cv.certifications | join(', ') }}</p>
+  {% endif %}
+
+  {% if cv.languages %}
+  <h2>{{ "Idiomas" if cv.detected_language == "es" else "Languages" }}</h2>
+  <p>{{ cv.languages | join(', ') }}</p>
+  {% endif %}
+</body>
+</html>

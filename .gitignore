@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+.env.example
+uploads/
+outputs/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.claude
+*.md
