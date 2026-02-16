@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="{{ cv.detected_language }}">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 1.5cm 2cm;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #2d2d2d;
+  }
+  h1 {
+    font-size: 22pt;
+    font-weight: bold;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+  }
+  .contact-info {
+    color: #555;
+    font-size: 9pt;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #1a1a2e;
+  }
+  h2 {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #1a1a2e;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #ddd;
+  }
+  .summary {
+    font-size: 10pt;
+    color: #444;
+    margin-bottom: 4px;
+  }
+  .entry { margin-bottom: 10px; }
+  .entry-header {
+    margin-bottom: 2px;
+  }
+  .entry-title { font-weight: bold; font-size: 10.5pt; }
+  .entry-company { color: #1a1a2e; font-weight: bold; }
+  .entry-dates { color: #777; font-size: 9pt; float: right; }
+  .entry-location { color: #777; font-size: 9pt; }
+  .entry-desc { margin-top: 3px; padding-left: 14px; }
+  .entry-desc li { margin-bottom: 2px; }
+  .techs {
+    font-size: 9pt;
+    color: #555;
+    margin-top: 2px;
+    padding-left: 14px;
+  }
+  .skill-tag {
+    background-color: #f0f0f5;
+    padding: 2px 6px;
+    font-size: 9pt;
+    display: inline;
+  }
+  .skill-tag-matched {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    font-weight: bold;
+    padding: 2px 6px;
+    font-size: 9pt;
+    display: inline;
+  }
+  .clearfix { clear: both; }
+</style>
+</head>
+<body>
+  <h1>{{ cv.contact.name }}</h1>
+  <div class="contact-info">
+    {% if cv.contact.email %}{{ cv.contact.email }}{% endif %}
+    {% if cv.contact.phone %} &middot; {{ cv.contact.phone }}{% endif %}
+    {% if cv.contact.location %} &middot; {{ cv.contact.location }}{% endif %}
+    {% if cv.contact.linkedin %} &middot; {{ cv.contact.linkedin }}{% endif %}
+    {% if cv.contact.website %} &middot; {{ cv.contact.website }}{% endif %}
+  </div>
+
+  {% if cv.summary %}
+  <h2>{{ "Resumen Profesional" if cv.detected_language == "es" else "Professional Summary" }}</h2>
+  <p class="summary">{{ cv.summary }}</p>
+  {% endif %}
+
+  {% if cv.experience %}
+  <h2>{{ "Experiencia" if cv.detected_language == "es" else "Experience" }}</h2>
+  {% for exp in cv.experience %}
+  <div class="entry">
+    <div class="entry-header">
+      <span class="entry-dates">{{ exp.dates }}</span>
+      <span class="entry-title">{{ exp.title }}</span>
+      {% if exp.company %} <span class="entry-company">| {{ exp.company }}</span>{% endif %}
+      <div class="clearfix"></div>
+    </div>
+    {% if exp.location %}<div class="entry-location">{{ exp.location }}</div>{% endif %}
+    {% if exp.description %}
+    <ul class="entry-desc">
+      {% for line in exp.description.split('\n') %}
+        {% set clean = line.strip().lstrip('-•* ').strip() %}
+        {% if clean %}<li>{{ clean }}</li>{% endif %}
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if exp.technologies %}
+    <div class="techs"><b>Tech:</b> {{ exp.technologies | join(', ') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.projects %}
+  <h2>{{ "Proyectos" if cv.detected_language == "es" else "Projects" }}</h2>
+  {% for proj in cv.projects %}
+  <div class="entry">
+    <div class="entry-title">{{ proj.name }}</div>
+    <p style="margin-top:2px;">{{ proj.description }}</p>
+    {% if proj.technologies %}
+    <div class="techs"><b>Tech:</b> {{ proj.technologies | join(', ') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.education %}
+  <h2>{{ "Educación" if cv.detected_language == "es" else "Education" }}</h2>
+  {% for edu in cv.education %}
+  <div class="entry">
+    <div class="entry-header">
+      <span class="entry-dates">{{ edu.dates }}</span>
+      <span class="entry-title">{{ edu.degree }}</span>
+      {% if edu.institution %} <span class="entry-company">| {{ edu.institution }}</span>{% endif %}
+      <div class="clearfix"></div>
+    </div>
+    {% if edu.details %}<p style="padding-left:14px;font-size:9.5pt;">{{ edu.details }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.skills %}
+  <h2>{{ "Habilidades" if cv.detected_language == "es" else "Skills" }}</h2>
+  <p>
+    {% for skill in cv.skills %}
+      {% if skill in matched_keywords %}<span class="skill-tag-matched">{{ skill }}</span>{% else %}<span class="skill-tag">{{ skill }}</span>{% endif %}{% if not loop.last %} {% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
+
+  {% if cv.certifications %}
+  <h2>{{ "Certificaciones" if cv.detected_language == "es" else "Certifications" }}</h2>
+  <ul>
+    {% for cert in cv.certifications %}<li>{{ cert }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if cv.languages %}
+  <h2>{{ "Idiomas" if cv.detected_language == "es" else "Languages" }}</h2>
+  <p>{{ cv.languages | join(', ') }}</p>
+  {% endif %}
+</body>
+</html>

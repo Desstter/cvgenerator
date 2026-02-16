@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV Generator — ATS-Optimized CV Adapter</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CV Generator</h1>
+      <p>Upload your CV + paste a job description. Get an ATS-optimized PDF.</p>
+    </header>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <!-- Upload -->
+    <div class="card">
+      <h2>1. Upload your CV (PDF)</h2>
+      <div class="drop-zone" id="drop-zone">
+        <div class="icon">&#128196;</div>
+        <p>Drag & drop your PDF here, or click to browse</p>
+        <div class="filename" id="filename"></div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf">
+    </div>
+
+    <!-- Job Description -->
+    <div class="card">
+      <h2>2. Paste the job description</h2>
+      <textarea id="job-desc" placeholder="Paste the full job description here (from LinkedIn, etc.)..."></textarea>
+    </div>
+
+    <!-- Options -->
+    <div class="card">
+      <h2>3. Options</h2>
+      <div class="options-row">
+        <div class="option-group">
+          <label>Template</label>
+          <select id="template-select">
+            <option value="modern">Modern (clean, minimal)</option>
+            <option value="classic">Classic (traditional)</option>
+            <option value="original">Original layout (best-effort)</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label>AI Provider</label>
+          <select id="provider-select">
+            <option value="">Default (from .env)</option>
+            <option value="claude">Claude</option>
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Gemini</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="card">
+      <button class="btn" id="adapt-btn" disabled>Adapt CV</button>
+    </div>
+
+    <!-- Progress -->
+    <div class="card progress-section" id="progress-section">
+      <div class="spinner"></div>
+      <p class="progress-text" id="progress-text">Analyzing your CV...</p>
+    </div>
+
+    <!-- Results -->
+    <div class="card results-section" id="results-section">
+      <h2>Results</h2>
+      <div class="ats-score">
+        <div class="score-value" id="score-value">0%</div>
+        <div class="score-label">ATS Match Score</div>
+      </div>
+
+      <div class="keywords-section">
+        <h3>Matched Keywords</h3>
+        <div class="keyword-tags" id="matched-keywords"></div>
+      </div>
+
+      <div class="keywords-section" style="margin-top:10px;">
+        <h3>Missing Keywords</h3>
+        <div class="keyword-tags" id="missing-keywords"></div>
+      </div>
+
+      <div class="suggestions" id="suggestions-box" style="display:none;">
+        <strong>Suggestions:</strong>
+        <ul id="suggestions-list"></ul>
+      </div>
+
+      <button class="btn download-btn" id="download-btn">Download Adapted CV (PDF)</button>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
