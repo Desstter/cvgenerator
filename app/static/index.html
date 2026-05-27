@@ -3,47 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CV Generator — ATS-Optimized CV Adapter</title>
+  <title>CV Generator — ATS-Optimized</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>CV Generator</h1>
-      <p>Upload your CV + paste a job description. Get an ATS-optimized PDF.</p>
+      <h1>My CV Generator</h1>
+      <p>Your CV is the source. Paste a job description to get an ATS-optimized PDF tailored for the role.</p>
     </header>
 
     <div class="error-msg" id="error-msg"></div>
+    <div class="success-msg" id="success-msg"></div>
 
-    <!-- Upload -->
-    <div class="card">
-      <h2>1. Upload your CV (PDF)</h2>
-      <div class="drop-zone" id="drop-zone">
-        <div class="icon">&#128196;</div>
-        <p>Drag & drop your PDF here, or click to browse</p>
-        <div class="filename" id="filename"></div>
+    <!-- My CV (editable, collapsible) -->
+    <div class="card my-cv-card">
+      <div class="my-cv-header">
+        <h2>My CV</h2>
+        <div class="my-cv-actions">
+          <button class="btn-ghost" id="edit-cv-btn">Edit</button>
+          <button class="btn-ghost" id="base-cv-btn">Download PDF</button>
+        </div>
       </div>
-      <input type="file" id="file-input" accept=".pdf">
+      <div id="cv-editor" class="cv-editor" style="display:none;"></div>
     </div>
 
-    <!-- Job Description -->
+    <!-- Job Description (main input) -->
     <div class="card">
-      <h2>2. Paste the job description</h2>
-      <textarea id="job-desc" placeholder="Paste the full job description here (from LinkedIn, etc.)..."></textarea>
+      <h2>Job Description</h2>
+      <textarea id="job-desc" placeholder="Paste the full job description here (from LinkedIn, Indeed, etc.)..."></textarea>
     </div>
 
     <!-- Options -->
     <div class="card">
-      <h2>3. Options</h2>
       <div class="options-row">
-        <div class="option-group">
-          <label>Template</label>
-          <select id="template-select">
-            <option value="modern">Modern (clean, minimal)</option>
-            <option value="classic">Classic (traditional)</option>
-            <option value="original">Original layout (best-effort)</option>
-          </select>
-        </div>
         <div class="option-group">
           <label>AI Provider</label>
           <select id="provider-select">
@@ -53,18 +46,41 @@
             <option value="gemini">Gemini</option>
           </select>
         </div>
+        <div class="option-group">
+          <label>Template</label>
+          <select id="template-select">
+            <option value="modern">Modern</option>
+            <option value="classic">Classic</option>
+          </select>
+        </div>
+        <div class="option-group option-group--checkbox">
+          <label>
+            <input type="checkbox" id="use-custom-cv"> Upload custom CV instead
+          </label>
+        </div>
       </div>
+    </div>
+
+    <!-- Optional CV upload (hidden by default) -->
+    <div class="card" id="upload-section" style="display:none;">
+      <h2>Custom CV (PDF)</h2>
+      <div class="drop-zone" id="drop-zone">
+        <div class="icon">&#128196;</div>
+        <p>Drag & drop your PDF here, or click to browse</p>
+        <div class="filename" id="filename"></div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf">
     </div>
 
     <!-- Submit -->
     <div class="card">
-      <button class="btn" id="adapt-btn" disabled>Adapt CV</button>
+      <button class="btn" id="adapt-btn" disabled>Generate Adapted CV</button>
     </div>
 
     <!-- Progress -->
     <div class="card progress-section" id="progress-section">
       <div class="spinner"></div>
-      <p class="progress-text" id="progress-text">Analyzing your CV...</p>
+      <p class="progress-text" id="progress-text">Analyzing job description...</p>
     </div>
 
     <!-- Results -->
@@ -73,6 +89,25 @@
       <div class="ats-score">
         <div class="score-value" id="score-value">0%</div>
         <div class="score-label">ATS Match Score</div>
+      </div>
+
+      <!-- ATS breakdown by category -->
+      <div class="ats-breakdown">
+        <div class="breakdown-row">
+          <span class="breakdown-label">Required</span>
+          <div class="breakdown-bar"><div class="breakdown-fill" id="req-fill"></div></div>
+          <span class="breakdown-pct" id="req-pct">0%</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="breakdown-label">Preferred</span>
+          <div class="breakdown-bar"><div class="breakdown-fill" id="pref-fill"></div></div>
+          <span class="breakdown-pct" id="pref-pct">0%</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="breakdown-label">General</span>
+          <div class="breakdown-bar"><div class="breakdown-fill" id="gen-fill"></div></div>
+          <span class="breakdown-pct" id="gen-pct">0%</span>
+        </div>
       </div>
 
       <div class="keywords-section">
@@ -85,12 +120,39 @@
         <div class="keyword-tags" id="missing-keywords"></div>
       </div>
 
+      <!-- Technologies adapted (swaps) -->
+      <div class="tech-swaps" id="tech-swaps-section" style="display:none;">
+        <h3>Technologies Adapted</h3>
+        <div class="swap-tags" id="swap-tags"></div>
+      </div>
+
+      <!-- What changed -->
+      <div class="changes-section" id="changes-section" style="display:none;">
+        <h3>What Changed</h3>
+        <ul class="changes-list" id="changes-list"></ul>
+      </div>
+
+      <!-- Job analysis (collapsible) -->
+      <details class="job-analysis">
+        <summary>Job Analysis</summary>
+        <div class="job-analysis-content" id="job-analysis-content"></div>
+      </details>
+
       <div class="suggestions" id="suggestions-box" style="display:none;">
         <strong>Suggestions:</strong>
         <ul id="suggestions-list"></ul>
       </div>
 
       <button class="btn download-btn" id="download-btn">Download Adapted CV (PDF)</button>
+    </div>
+
+    <!-- Application History -->
+    <div class="card history-card" id="history-card" style="display:none;">
+      <div class="history-header">
+        <h2>Application History</h2>
+        <button class="btn-ghost" id="clear-history-btn">Clear All</button>
+      </div>
+      <div id="history-list"></div>
     </div>
   </div>
 

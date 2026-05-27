@@ -59,31 +59,52 @@
     margin-top: 2px;
     padding-left: 14px;
   }
-  .skill-tag {
-    background-color: #f0f0f5;
-    padding: 2px 6px;
-    font-size: 9pt;
-    display: inline;
+  .skills-grid {
+    width: 100%;
+    border-collapse: collapse;
   }
-  .skill-tag-matched {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+  .skills-grid td {
+    vertical-align: top;
+    padding: 3px 0;
+    font-size: 9.5pt;
+  }
+  .skills-grid .skill-category {
     font-weight: bold;
-    padding: 2px 6px;
+    color: #1a1a2e;
+    width: 30%;
+    padding-right: 8px;
     font-size: 9pt;
-    display: inline;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .skills-grid .skill-items {
+    color: #444;
+  }
+  .skill-highlight {
+    font-weight: bold;
+    color: #1a1a2e;
   }
   .clearfix { clear: both; }
+  .contact-website {
+    font-weight: bold;
+    color: #1a1a2e;
+    font-size: 9.5pt;
+  }
+  .contact-location {
+    color: #999;
+    font-size: 8pt;
+  }
 </style>
 </head>
 <body>
   <h1>{{ cv.contact.name }}</h1>
   <div class="contact-info">
     {% if cv.contact.email %}{{ cv.contact.email }}{% endif %}
-    {% if cv.contact.phone %} &middot; {{ cv.contact.phone }}{% endif %}
-    {% if cv.contact.location %} &middot; {{ cv.contact.location }}{% endif %}
+    {% if cv.contact.phone %} &middot; <img src="{{ icons_dir }}/phone.svg" width="9" height="9"/> {{ cv.contact.phone }}{% endif %}
+    {% if cv.contact.website %} &middot; <img src="{{ icons_dir }}/web.svg" width="10" height="10"/> <span class="contact-website">{{ cv.contact.website }}</span>{% endif %}
+    {% if cv.contact.github %} &middot; <img src="{{ icons_dir }}/github.svg" width="10" height="10"/> {{ cv.contact.github }}{% endif %}
     {% if cv.contact.linkedin %} &middot; {{ cv.contact.linkedin }}{% endif %}
-    {% if cv.contact.website %} &middot; {{ cv.contact.website }}{% endif %}
+    {% if cv.contact.location %} <span class="contact-location">&middot; {{ cv.contact.location }}</span>{% endif %}
   </div>
 
   {% if cv.summary %}
@@ -147,11 +168,63 @@
 
   {% if cv.skills %}
   <h2>{{ "Habilidades" if cv.detected_language == "es" else "Skills" }}</h2>
-  <p>
+  <table class="skills-grid">
+    {% set ns = namespace(langs=[], frameworks=[], infra=[], tools=[], other=[]) %}
     {% for skill in cv.skills %}
-      {% if skill in matched_keywords %}<span class="skill-tag-matched">{{ skill }}</span>{% else %}<span class="skill-tag">{{ skill }}</span>{% endif %}{% if not loop.last %} {% endif %}
+      {% set s = skill.lower() %}
+      {% if s in ['php','python','javascript','typescript','java','c#','go','ruby','sql','html','css'] %}
+        {% set ns.langs = ns.langs + [skill] %}
+      {% elif s in ['vue.js','react','angular','next.js','node.js','express','django','flask','laravel','wordpress','jquery','tailwind','bootstrap'] %}
+        {% set ns.frameworks = ns.frameworks + [skill] %}
+      {% elif s in ['aws','oracle cloud (oci)','oracle cloud','docker','kubernetes','linux','nginx','apache','ci/cd','aws lambda','gcp','azure','serverless'] %}
+        {% set ns.infra = ns.infra + [skill] %}
+      {% elif s in ['git','github','gitlab','mysql','postgresql','mongodb','redis','rest apis','graphql','jira','figma','cpanel'] %}
+        {% set ns.tools = ns.tools + [skill] %}
+      {% else %}
+        {% set ns.other = ns.other + [skill] %}
+      {% endif %}
     {% endfor %}
-  </p>
+    {% if ns.langs %}
+    <tr>
+      <td class="skill-category">{{ "Lenguajes" if cv.detected_language == "es" else "Languages" }}</td>
+      <td class="skill-items">
+        {% for s in ns.langs %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+      </td>
+    </tr>
+    {% endif %}
+    {% if ns.frameworks %}
+    <tr>
+      <td class="skill-category">Frameworks</td>
+      <td class="skill-items">
+        {% for s in ns.frameworks %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+      </td>
+    </tr>
+    {% endif %}
+    {% if ns.infra %}
+    <tr>
+      <td class="skill-category">{{ "Infraestructura" if cv.detected_language == "es" else "Infrastructure" }}</td>
+      <td class="skill-items">
+        {% for s in ns.infra %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+      </td>
+    </tr>
+    {% endif %}
+    {% if ns.tools %}
+    <tr>
+      <td class="skill-category">{{ "Herramientas" if cv.detected_language == "es" else "Tools & DBs" }}</td>
+      <td class="skill-items">
+        {% for s in ns.tools %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+      </td>
+    </tr>
+    {% endif %}
+    {% if ns.other %}
+    <tr>
+      <td class="skill-category">{{ "Otros" if cv.detected_language == "es" else "Other" }}</td>
+      <td class="skill-items">
+        {% for s in ns.other %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+      </td>
+    </tr>
+    {% endif %}
+  </table>
   {% endif %}
 
   {% if cv.certifications %}

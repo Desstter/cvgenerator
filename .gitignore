@@ -4,6 +4,8 @@ __pycache__/
 .env.example
 uploads/
 outputs/
+saved/
+*.pdf
 *.egg-info/
 dist/
 build/

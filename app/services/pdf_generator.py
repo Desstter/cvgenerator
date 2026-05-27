@@ -1,3 +1,4 @@
+import re
 import uuid
 import fitz
 from io import BytesIO
@@ -8,6 +9,73 @@ from xhtml2pdf import pisa
 from app.config import settings
 from app.models.schemas import CVData
 
+# Month abbreviations keyed by lowercase source token, per target language.
+_MONTHS_TO_EN = {
+    "ene": "Jan", "enero": "Jan", "feb": "Feb", "febrero": "Feb",
+    "mar": "Mar", "marzo": "Mar", "abr": "Apr", "abril": "Apr",
+    "may": "May", "mayo": "May", "jun": "Jun", "junio": "Jun",
+    "jul": "Jul", "julio": "Jul", "ago": "Aug", "agosto": "Aug",
+    "sep": "Sep", "sept": "Sep", "septiembre": "Sep",
+    "oct": "Oct", "octubre": "Oct", "nov": "Nov", "noviembre": "Nov",
+    "dic": "Dec", "diciembre": "Dec",
+}
+_MONTHS_TO_ES = {
+    "jan": "Ene", "january": "Ene", "feb": "Feb", "february": "Feb",
+    "mar": "Mar", "march": "Mar", "apr": "Abr", "april": "Abr",
+    "may": "May", "jun": "Jun", "june": "Jun", "jul": "Jul", "july": "Jul",
+    "aug": "Ago", "august": "Ago", "sep": "Sep", "sept": "Sep", "september": "Sep",
+    "oct": "Oct", "october": "Oct", "nov": "Nov", "november": "Nov",
+    "dec": "Dic", "december": "Dic",
+}
+_LOCATION_TO_EN = {"remoto": "Remote", "híbrido": "Hybrid", "hibrido": "Hybrid", "presencial": "On-site"}
+_LOCATION_TO_ES = {"remote": "Remoto", "hybrid": "Híbrido", "on-site": "Presencial", "onsite": "Presencial"}
+# Language names + proficiency levels, keyed by lowercase source token.
+_LANG_TO_EN = {
+    "español": "Spanish", "espanol": "Spanish", "inglés": "English", "ingles": "English",
+    "francés": "French", "frances": "French", "alemán": "German", "aleman": "German",
+    "portugués": "Portuguese", "portugues": "Portuguese", "italiano": "Italian",
+    "nativo": "Native", "nativa": "Native", "fluido": "Fluent", "fluida": "Fluent",
+    "avanzado": "Advanced", "avanzada": "Advanced", "intermedio": "Intermediate",
+    "intermedia": "Intermediate", "básico": "Basic", "basico": "Basic",
+    "profesional": "Professional",
+}
+_LANG_TO_ES = {
+    "spanish": "Español", "english": "Inglés", "french": "Francés", "german": "Alemán",
+    "portuguese": "Portugués", "italian": "Italiano",
+    "native": "Nativo", "fluent": "Fluido", "advanced": "Avanzado",
+    "intermediate": "Intermedio", "basic": "Básico", "professional": "Profesional",
+}
+
+_WORD_RE = re.compile(r"[A-Za-zÁÉÍÓÚáéíóúñÑ]+")
+
+
+def _translate_tokens(text: str, mapping: dict[str, str]) -> str:
+    """Replace whole alpha words found in mapping (case-insensitive), preserving the rest."""
+    if not text:
+        return text
+    return _WORD_RE.sub(lambda m: mapping.get(m.group(0).lower(), m.group(0)), text)
+
+
+def _localize_cv(cv: CVData) -> CVData:
+    """Translate immutable-but-language-dependent fields (dates, location, languages)
+    to match the CV's detected language. Returns a copy; original is untouched."""
+    lang = cv.detected_language
+    if lang not in ("es", "en"):
+        return cv
+
+    months = _MONTHS_TO_EN if lang == "en" else _MONTHS_TO_ES
+    location = _LOCATION_TO_EN if lang == "en" else _LOCATION_TO_ES
+    langmap = _LANG_TO_EN if lang == "en" else _LANG_TO_ES
+
+    out = cv.model_copy(deep=True)
+    for exp in out.experience:
+        exp.dates = _translate_tokens(exp.dates, months)
+        exp.location = _translate_tokens(exp.location, location)
+    for edu in out.education:
+        edu.dates = _translate_tokens(edu.dates, months)
+    out.languages = [_translate_tokens(l, langmap) for l in out.languages]
+    return out
+
 
 def generate_pdf_from_template(
     cv: CVData,
@@ -15,12 +83,16 @@ def generate_pdf_from_template(
     template_name: str = "modern",
 ) -> Path:
     """Generate a PDF from an HTML template using xhtml2pdf."""
+    cv = _localize_cv(cv)
     env = Environment(loader=FileSystemLoader(str(settings.templates_dir)))
     template = env.get_template(f"{template_name}.html")
+
+    icons_dir = (settings.static_dir / "icons").as_posix()
 
     html_content = template.render(
         cv=cv,
         matched_keywords=matched_keywords or [],
+        icons_dir=icons_dir,
     )
 
     output_filename = f"cv_{uuid.uuid4().hex[:8]}.pdf"
