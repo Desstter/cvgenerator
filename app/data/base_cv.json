@@ -9,17 +9,19 @@
       "website": "moonhellal.com",
       "github": "github.com/Desstter"
     },
-    "summary": "Desarrollador Full-Stack con 5 años de experiencia creando y manteniendo sistemas escalables en entornos de producción. Experiencia sólida en arquitecturas en la nube (OCI, AWS), integraciones con APIs REST y despliegues automatizados. Apasionado por la inteligencia artificial aplicada a productos reales. Reconocido por mi capacidad para optimizar rendimiento, liderar equipos técnicos y trabajar en entornos 100% remotos y colaborativos.",
+    "summary": "Desarrollador Full-Stack con 5 años construyendo y manteniendo sistemas en producción: backends Python/Django, frontends TypeScript/Vue.js, e infraestructura cloud en OCI y AWS. Integro modelos de IA (Claude, GPT-4, Gemini) en productos reales — desde herramientas con pipelines de prompts estructurados hasta sistemas de optimización automatizada. Lidero equipos técnicos, entrego a clientes, y opero 100% remoto.",
     "experience": [
       {
         "company": "Bit Colombia",
         "title": "Líder Técnico / Fullstack Developer",
         "dates": "Ago 2023 – Ene 2026",
         "location": "Remoto",
-        "description": "• Lideré el rediseño completo del entorno de producción en la nube, migrando y modernizando infraestructura en Oracle Cloud (OCI) y AWS, logrando una mejora de 10x en velocidad y rendimiento.\n• Encargado de la coordinación de un equipo multidisciplinario (incluyendo diseñadores y especialistas en bases de datos), asegurando la calidad y escalabilidad de los proyectos.\n• Gestioné proyectos WordPress a gran escala, asegurando estabilidad y manteniendo estándares de desarrollo profesional.\n• Implementé mejoras de UI/UX y optimizaciones que redujeron el tiempo de carga en 10X.",
+        "description": "• Lideré el rediseño completo del entorno de producción en la nube, migrando y modernizando infraestructura en Oracle Cloud (OCI) y AWS, logrando una mejora de 10x en velocidad y rendimiento.\n• Desarrollé plugins WordPress custom y componentes React integrados con Gutenberg, además de aplicaciones React independientes para dashboards y paneles internos.\n• Coordiné un equipo multidisciplinario (diseñadores, especialistas en bases de datos e infraestructura), asegurando la calidad y escalabilidad de los proyectos.\n• Implementé mejoras de UI/UX y optimizaciones que redujeron el tiempo de carga en 10X.",
         "technologies": [
           "PHP",
           "WordPress",
+          "React",
+          "JavaScript",
           "Linux",
           "Oracle Cloud",
           "AWS",
@@ -47,10 +49,13 @@
         "title": "Fullstack Developer",
         "dates": "Nov 2021 – Abr 2022",
         "location": "Remoto",
-        "description": "• Dirigí la modernización de la infraestructura de aplicaciones utilizando Docker y AWS, incluyendo migración a arquitecturas serverless con AWS Lambda.\n• Desarrollé APIs para evaluación crediticia.\n• Desarrollé y mantuve aplicaciones críticas, incorporando mejoras continuas y funcionalidades avanzadas.\n• Integré proveedores externos y servicios de scoring.",
+        "description": "• Dirigí la modernización de la infraestructura de aplicaciones utilizando Docker y AWS, incluyendo migración a arquitecturas serverless con AWS Lambda.\n• Desarrollé APIs para evaluación crediticia e integré proveedores externos de scoring.\n• Construí y mantuve aplicaciones críticas con Node.js/Express y Django, incorporando mejoras continuas y funcionalidades avanzadas.\n• Migré base de datos a PostgreSQL optimizando consultas y esquemas para cargas de producción.",
         "technologies": [
           "Python",
           "Django",
+          "Node.js",
+          "Express",
+          "PostgreSQL",
           "Docker",
           "AWS",
           "AWS Lambda",
@@ -66,26 +71,75 @@
         "details": ""
       }
     ],
-    "projects": [],
+    "projects": [
+      {
+        "name": "HYR Constructora — Sistema de Gestión",
+        "url": "",
+        "description": "Sistema full-stack para gestión integral de una constructora: nómina colombiana con cálculo automático de prestaciones sociales, PILA y horas extra (cumplimiento DIAN), control de asistencia con registro entrada/salida, gestión de proyectos con presupuestos y calendario, y reportes exportables a PDF.",
+        "technologies": [
+          "Next.js 15",
+          "TypeScript",
+          "Tailwind CSS",
+          "shadcn/ui",
+          "Zustand",
+          "Express.js",
+          "Node.js",
+          "PostgreSQL"
+        ]
+      },
+      {
+        "name": "CV Generator — Optimizador de CVs con IA",
+        "url": "",
+        "description": "Herramienta que adapta un CV a cualquier descripción de puesto usando Claude, GPT-4 o Gemini como proveedores intercambiables. Implementa scoring ATS con análisis de keywords por categoría, reglas de sustitución de tecnologías en dos niveles (Tier 1/Tier 2), y generación de PDF con templates Jinja2. Multi-proveedor con fallback automático.",
+        "technologies": [
+          "FastAPI",
+          "Python",
+          "Claude API",
+          "OpenAI API",
+          "Gemini API",
+          "Jinja2",
+          "PyMuPDF",
+          "xhtml2pdf"
+        ]
+      },
+      {
+        "name": "Altavida — Sitio Web para Cliente",
+        "url": "",
+        "description": "Sitio web en producción para estudio de masajes en Cali. Arquitectura estática con Astro y una isla React para el flujo de reservas. Sistema de contenido editable desde un único archivo de configuración para facilitar actualizaciones sin conocimientos técnicos del cliente.",
+        "technologies": [
+          "Astro",
+          "React",
+          "TypeScript",
+          "CSS"
+        ]
+      }
+    ],
     "skills": [
-      "PHP",
       "Python",
+      "FastAPI",
+      "Django",
+      "Node.js",
+      "Express.js",
       "JavaScript",
       "TypeScript",
       "Vue.js",
-      "Django",
+      "React",
+      "Next.js",
+      "PHP",
       "WordPress",
       "Linux",
       "Docker",
       "AWS",
       "Oracle Cloud (OCI)",
-      "MySQL",
       "PostgreSQL",
+      "MySQL",
       "REST APIs",
       "Git",
       "CI/CD",
       "HTML",
-      "CSS"
+      "CSS",
+      "Kotlin",
+      "Android"
     ],
     "certifications": [],
     "languages": [
@@ -99,6 +153,8 @@
       "real_technologies": [
         "PHP",
         "WordPress",
+        "React",
+        "JavaScript",
         "Linux",
         "Oracle Cloud (OCI)",
         "AWS",
@@ -109,17 +165,16 @@
         "Git",
         "cPanel",
         "HTML",
-        "CSS",
-        "JavaScript"
+        "CSS"
       ],
       "real_achievements": [
         "Led complete production environment redesign, migrating infrastructure on OCI and AWS, achieving 10x speed improvement",
+        "Developed custom WordPress plugins and React components integrated with Gutenberg blocks",
+        "Built standalone React applications for internal dashboards and admin panels",
         "Managed and maintained a full production website end-to-end as sole responsible developer",
         "Coordinated multidisciplinary team including designers, DB specialists, and infrastructure",
-        "Managed large-scale WordPress projects ensuring stability and professional standards",
         "Implemented UI/UX improvements and optimizations that reduced load time by 10x",
-        "Deep Linux administration: server config, deployments, security, automation",
-        "Modernized legacy technology stack with significant performance gains"
+        "Deep Linux administration: server config, deployments, security, automation"
       ]
     },
     "Grupo Vidawa": {
@@ -155,10 +210,10 @@
       ],
       "real_achievements": [
         "Modernized application infrastructure using Docker and AWS, including serverless migration with AWS Lambda",
-        "Developed APIs for credit evaluation",
-        "Built and maintained critical applications with continuous improvements",
-        "Integrated external providers and scoring services",
-        "Explored and evaluated low-code Python frameworks for optimization"
+        "Developed APIs for credit evaluation and integrated external scoring providers",
+        "Built and maintained critical applications in both Django and Node.js/Express",
+        "Migrated database to PostgreSQL, optimizing queries and schemas for production loads",
+        "Integrated external providers and scoring services"
       ]
     }
   }
