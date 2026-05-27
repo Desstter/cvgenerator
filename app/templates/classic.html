@@ -49,18 +49,25 @@
   .techs { font-size: 10pt; color: #444; padding-left: 20px; margin-top: 2px; }
   .skill-matched { font-weight: bold; }
   .clearfix { clear: both; }
+  .contact-website {
+    font-weight: bold;
+    color: #000;
+  }
+  .contact-location {
+    color: #888;
+    font-size: 8.5pt;
+  }
 </style>
 </head>
 <body>
   <h1>{{ cv.contact.name }}</h1>
   <div class="contact-info">
-    {% set parts = [] %}
-    {% if cv.contact.email %}{% set _ = parts.append(cv.contact.email) %}{% endif %}
-    {% if cv.contact.phone %}{% set _ = parts.append(cv.contact.phone) %}{% endif %}
-    {% if cv.contact.location %}{% set _ = parts.append(cv.contact.location) %}{% endif %}
-    {% if cv.contact.linkedin %}{% set _ = parts.append(cv.contact.linkedin) %}{% endif %}
-    {% if cv.contact.website %}{% set _ = parts.append(cv.contact.website) %}{% endif %}
-    {{ parts | join(' | ') }}
+    {% if cv.contact.email %}{{ cv.contact.email }}{% endif %}
+    {% if cv.contact.phone %} | <img src="{{ icons_dir }}/phone.svg" width="9" height="9"/> {{ cv.contact.phone }}{% endif %}
+    {% if cv.contact.website %} | <img src="{{ icons_dir }}/web.svg" width="10" height="10"/> <span class="contact-website">{{ cv.contact.website }}</span>{% endif %}
+    {% if cv.contact.github %} | <img src="{{ icons_dir }}/github.svg" width="10" height="10"/> {{ cv.contact.github }}{% endif %}
+    {% if cv.contact.linkedin %} | {{ cv.contact.linkedin }}{% endif %}
+    {% if cv.contact.location %} <span class="contact-location">| {{ cv.contact.location }}</span>{% endif %}
   </div>
 
   {% if cv.summary %}

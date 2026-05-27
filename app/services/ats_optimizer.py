@@ -126,8 +126,11 @@ def analyze_keyword_match(cv: CVData, job: JobDescription) -> ATSScore:
 
     return ATSScore(
         overall_score=round(score, 1),
-        matched_keywords=matched,
-        missing_keywords=missing,
+        required_score=round(len(matched_req) / len(required) * 100 if required else 0, 1),
+        preferred_score=round(len(matched_pref) / len(preferred) * 100 if preferred else 0, 1),
+        general_score=round(len(matched_gen) / len(general) * 100 if general else 0, 1),
+        matched_keywords=list(dict.fromkeys(matched_req + matched_pref + matched_gen)),
+        missing_keywords=list(dict.fromkeys(missing_req + missing_pref + missing_gen)),
         suggestions=suggestions,
     )
 

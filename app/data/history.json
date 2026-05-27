@@ -1,0 +1,233 @@
+[
+  {
+    "id": "568df4ff",
+    "date": "2026-05-26T19:25:15.322541",
+    "job_title": "Frontend Developer",
+    "company": "Unknown Company",
+    "ats_score": 32.3,
+    "required_score": 40.0,
+    "preferred_score": 10.0,
+    "pdf_filename": "cv_09e88450.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "e2b7e95d",
+    "date": "2026-05-26T19:23:38.892152",
+    "job_title": "Conversion Optimization Specialist",
+    "company": "Unknown Company",
+    "ats_score": 10.7,
+    "required_score": 0.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_2ee135e0.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "994437f8",
+    "date": "2026-05-26T19:21:38.237816",
+    "job_title": "Desarrollador/a WordPress",
+    "company": "Unknown Company",
+    "ats_score": 27.9,
+    "required_score": 0.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_04358990.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "bb5a410b",
+    "date": "2026-05-26T19:19:18.191496",
+    "job_title": "Software Developer (AI-Native Stack)",
+    "company": "Unknown Company",
+    "ats_score": 7.6,
+    "required_score": 0.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_bc04ba79.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "9e504e6f",
+    "date": "2026-05-26T19:17:03.015593",
+    "job_title": "Ingeniero de Software Fullstack",
+    "company": "Muno Labs",
+    "ats_score": 62.0,
+    "required_score": 70.0,
+    "preferred_score": 100.0,
+    "pdf_filename": "cv_8064212d.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "c5209515",
+    "date": "2026-05-26T19:04:00.319635",
+    "job_title": "Python Developer",
+    "company": "Unknown Company",
+    "ats_score": 57.8,
+    "required_score": 66.7,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_78b1e2ed.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "0ae1da5b",
+    "date": "2026-05-26T18:59:44.722533",
+    "job_title": "Lead Full Stack Software Engineer",
+    "company": "Unknown Company",
+    "ats_score": 42.9,
+    "required_score": 85.7,
+    "preferred_score": 25.0,
+    "pdf_filename": "cv_c89a15ec.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "06b1d069",
+    "date": "2026-05-26T18:56:20.588129",
+    "job_title": "Software Engineer",
+    "company": "Unknown Company",
+    "ats_score": 57.3,
+    "required_score": 84.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_758eec2f.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "a578f51a",
+    "date": "2026-05-26T18:45:48.357863",
+    "job_title": "AI-Native Software Engineer",
+    "company": "Unknown Company",
+    "ats_score": 58.7,
+    "required_score": 80.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_f6266def.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "527b9b7a",
+    "date": "2026-05-26T18:39:43.260909",
+    "job_title": "AI Engineer",
+    "company": "Unknown Company",
+    "ats_score": 66.7,
+    "required_score": 96.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_eea0202d.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "3adab327",
+    "date": "2026-05-26T18:36:50.743791",
+    "job_title": "AI-Native Application Developer",
+    "company": "Unknown Company",
+    "ats_score": 55.9,
+    "required_score": 91.3,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_6104ba09.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "6cbc7e09",
+    "date": "2026-05-26T18:35:58.791303",
+    "job_title": "AI-Native Application Developer",
+    "company": "Unknown Company",
+    "ats_score": 61.1,
+    "required_score": 92.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_5b51047a.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "aa523598",
+    "date": "2026-05-26T18:32:03.729400",
+    "job_title": "Python Backend Developer",
+    "company": "Unknown Company",
+    "ats_score": 56.9,
+    "required_score": 73.9,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_5479a773.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "fc7635c0",
+    "date": "2026-05-26T18:30:54.503189",
+    "job_title": "Software Engineer",
+    "company": "Intellias",
+    "ats_score": 48.5,
+    "required_score": 58.8,
+    "preferred_score": 9.1,
+    "pdf_filename": "cv_18fc4b8a.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "d4aeb965",
+    "date": "2026-05-26T18:29:55.403808",
+    "job_title": "Técnico o tecnólogo en ADSO, Análisis y Desarrollo de Software, Programación de Software, Desarrollo Web, Carreras afines TIC",
+    "company": "Unknown Company",
+    "ats_score": 75.4,
+    "required_score": 83.3,
+    "preferred_score": 100.0,
+    "pdf_filename": "cv_1267ebc0.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "2f107715",
+    "date": "2026-05-26T18:26:23.295018",
+    "job_title": "Backend Developer",
+    "company": "Unknown Company",
+    "ats_score": 71.4,
+    "required_score": 92.3,
+    "preferred_score": 25.0,
+    "pdf_filename": "cv_412e61b7.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "7025d4fd",
+    "date": "2026-05-26T16:48:47.811027",
+    "job_title": "Junior Software Engineer (Java)",
+    "company": "ScotiaTech",
+    "ats_score": 81.4,
+    "required_score": 92.9,
+    "preferred_score": 66.7,
+    "pdf_filename": "cv_315334f1.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "a9514cbc",
+    "date": "2026-05-26T16:46:19.499334",
+    "job_title": "Senior Full Stack Developer",
+    "company": "TP",
+    "ats_score": 65.0,
+    "required_score": 88.9,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_ff62a41a.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "e9d84286",
+    "date": "2026-05-26T16:41:29.103896",
+    "job_title": "SemiSenior Backend Developer",
+    "company": "Consultora digital",
+    "ats_score": 74.2,
+    "required_score": 86.7,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_7307dceb.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "a5ea665f",
+    "date": "2026-05-26T16:19:13.232618",
+    "job_title": "SemiSenior Backend Developer",
+    "company": "Unknown Company",
+    "ats_score": 66.7,
+    "required_score": 66.7,
+    "preferred_score": 75.0,
+    "pdf_filename": "cv_3a2333ea.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "decf0384",
+    "date": "2026-05-26T16:11:56.008199",
+    "job_title": "SemiSenior Backend Developer Backend Developer', ",
+    "company": "Unknown Company",
+    "ats_score": 0.0,
+    "required_score": 0.0,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_79c81148.pdf",
+    "detected_language": "en"
+  }
+]
