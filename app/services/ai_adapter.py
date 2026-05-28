@@ -169,6 +169,19 @@ def get_provider(name: str | None = None) -> AIProvider:
         raise ValueError(f"Unknown AI provider: {provider_name}")
 
 
+def _repair_json(candidate: str) -> str | None:
+    """Try to repair malformed JSON using json-repair. Returns fixed string or None."""
+    try:
+        from json_repair import repair_json
+        repaired = repair_json(candidate)
+        if repaired and repaired not in ('""', "''", "null"):
+            json.loads(repaired)  # validate the repair actually worked
+            return repaired
+    except Exception:
+        pass
+    return None
+
+
 def _extract_json(text: str) -> str:
     """Extract JSON from AI response with validation and robust parsing."""
     match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
@@ -178,7 +191,9 @@ def _extract_json(text: str) -> str:
             json.loads(candidate)
             return candidate
         except json.JSONDecodeError:
-            pass
+            repaired = _repair_json(candidate)
+            if repaired:
+                return repaired
 
     brace_count = 0
     start_idx = text.find('{')
@@ -197,6 +212,12 @@ def _extract_json(text: str) -> str:
                     return candidate
                 except json.JSONDecodeError:
                     continue
+
+    # Last resort: repair the whole text (handles truncated/malformed responses)
+    repaired = _repair_json(text)
+    if repaired:
+        logger.warning("JSON was malformed; recovered via json-repair")
+        return repaired
 
     return text
 
@@ -228,10 +249,33 @@ def _clean_none_values(obj):
     return obj
 
 
+def _coerce_equivalences(raw) -> dict[str, list[str]]:
+    """Validate the LLM's keyword_equivalences. Drop anything malformed instead of raising."""
+    if not isinstance(raw, dict):
+        return {}
+    cleaned: dict[str, list[str]] = {}
+    for k, v in raw.items():
+        if not isinstance(k, str) or not k.strip():
+            continue
+        if isinstance(v, list):
+            equivalents = [str(item).strip() for item in v if isinstance(item, (str, int, float)) and str(item).strip()]
+        elif isinstance(v, str) and v.strip():
+            equivalents = [v.strip()]
+        else:
+            continue
+        if equivalents:
+            cleaned[k.strip()] = equivalents
+    return cleaned
+
+
 def analyze_and_adapt(
     provider: AIProvider, cv: CVData, job_text: str, real_context: str = ""
-) -> tuple[JobDescription, CVData]:
-    """Single API call: analyze job description and adapt the CV simultaneously."""
+) -> tuple[JobDescription, CVData, dict[str, list[str]]]:
+    """Single API call: analyze job description and adapt the CV simultaneously.
+
+    Returns (job, adapted_cv, keyword_equivalences). The equivalences map is the LLM's
+    suggested synonym pairs used downstream by ATS scoring to avoid false negatives.
+    """
     cv_dict = cv.model_dump(exclude={"raw_markdown"})
     prompt = combined_analyze_adapt_prompt(
         json.dumps(cv_dict, ensure_ascii=False, indent=2),
@@ -254,6 +298,8 @@ def analyze_and_adapt(
         responsibilities=job_data.get("responsibilities", []),
         detected_language=job_data.get("detected_language", "en"),
     )
+
+    equivalences = _coerce_equivalences(data.get("keyword_equivalences"))
 
     cv_data = data.get("adapted_cv", {})
     detected_lang = job.detected_language or cv.detected_language
@@ -298,7 +344,7 @@ def analyze_and_adapt(
         else:
             adapted.projects.append(orig)
 
-    return job, adapted
+    return job, adapted, equivalences
 
 
 def analyze_job(provider: AIProvider, job_text: str) -> JobDescription:

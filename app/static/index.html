@@ -86,26 +86,43 @@
     <!-- Results -->
     <div class="card results-section" id="results-section">
       <h2>Results</h2>
-      <div class="ats-score">
-        <div class="score-value" id="score-value">0%</div>
-        <div class="score-label">ATS Match Score</div>
+      <div class="ats-score ats-score-compare">
+        <div class="score-side">
+          <div class="score-side-label">Before</div>
+          <div class="score-value score-value-before" id="score-value-before">0%</div>
+        </div>
+        <div class="score-delta" id="score-delta">+0</div>
+        <div class="score-side">
+          <div class="score-side-label">After</div>
+          <div class="score-value" id="score-value">0%</div>
+        </div>
       </div>
+      <div class="score-label">ATS Match Score</div>
 
       <!-- ATS breakdown by category -->
       <div class="ats-breakdown">
         <div class="breakdown-row">
           <span class="breakdown-label">Required</span>
-          <div class="breakdown-bar"><div class="breakdown-fill" id="req-fill"></div></div>
+          <div class="breakdown-bar">
+            <div class="breakdown-fill breakdown-fill-before" id="req-fill-before"></div>
+            <div class="breakdown-fill" id="req-fill"></div>
+          </div>
           <span class="breakdown-pct" id="req-pct">0%</span>
         </div>
         <div class="breakdown-row">
           <span class="breakdown-label">Preferred</span>
-          <div class="breakdown-bar"><div class="breakdown-fill" id="pref-fill"></div></div>
+          <div class="breakdown-bar">
+            <div class="breakdown-fill breakdown-fill-before" id="pref-fill-before"></div>
+            <div class="breakdown-fill" id="pref-fill"></div>
+          </div>
           <span class="breakdown-pct" id="pref-pct">0%</span>
         </div>
         <div class="breakdown-row">
           <span class="breakdown-label">General</span>
-          <div class="breakdown-bar"><div class="breakdown-fill" id="gen-fill"></div></div>
+          <div class="breakdown-bar">
+            <div class="breakdown-fill breakdown-fill-before" id="gen-fill-before"></div>
+            <div class="breakdown-fill" id="gen-fill"></div>
+          </div>
           <span class="breakdown-pct" id="gen-pct">0%</span>
         </div>
       </div>
