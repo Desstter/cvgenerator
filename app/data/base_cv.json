@@ -16,16 +16,21 @@
         "title": "Líder Técnico / Fullstack Developer",
         "dates": "Ago 2023 – Ene 2026",
         "location": "Remoto",
-        "description": "• Lideré el rediseño completo del entorno de producción en la nube, migrando y modernizando infraestructura en Oracle Cloud (OCI) y AWS, logrando una mejora de 10x en velocidad y rendimiento.\n• Desarrollé plugins WordPress custom y componentes React integrados con Gutenberg, además de aplicaciones React independientes para dashboards y paneles internos.\n• Coordiné un equipo multidisciplinario (diseñadores, especialistas en bases de datos e infraestructura), asegurando la calidad y escalabilidad de los proyectos.\n• Implementé mejoras de UI/UX y optimizaciones que redujeron el tiempo de carga en 10X.",
+        "description": "• Lideré el rediseño completo del entorno de producción en la nube, migrando y modernizando infraestructura en Oracle Cloud (OCI) y AWS, logrando una mejora de 10x en velocidad y rendimiento.\n• Desarrollé plugins WordPress custom y componentes React integrados con Gutenberg, además de aplicaciones React independientes para dashboards y paneles internos.\n• Coordiné un equipo multidisciplinario (diseñadores, especialistas en bases de datos e infraestructura), asegurando la calidad y escalabilidad de los proyectos.\n• Implementé mejoras de UI/UX y optimizaciones que redujeron el tiempo de carga en 10X.\n• Desarrollé para cliente plataforma de gestión empresarial full-stack: módulo de nómina con cálculo automático de prestaciones, control de asistencia, gestión de proyectos con presupuestos y generación de reportes en PDF.\n• Construí para cliente sitio web en producción con arquitectura estática (Astro) e isla React para sistema de reservas online, con panel de contenido autoeditable sin conocimientos técnicos.",
         "technologies": [
           "PHP",
           "WordPress",
           "React",
           "JavaScript",
+          "TypeScript",
+          "Next.js",
+          "Astro",
+          "Tailwind CSS",
           "Linux",
           "Oracle Cloud",
           "AWS",
           "MySQL",
+          "PostgreSQL",
           "Docker"
         ]
       },
@@ -71,49 +76,7 @@
         "details": ""
       }
     ],
-    "projects": [
-      {
-        "name": "HYR Constructora — Sistema de Gestión",
-        "url": "",
-        "description": "Sistema full-stack para gestión integral de una constructora: nómina colombiana con cálculo automático de prestaciones sociales, PILA y horas extra (cumplimiento DIAN), control de asistencia con registro entrada/salida, gestión de proyectos con presupuestos y calendario, y reportes exportables a PDF.",
-        "technologies": [
-          "Next.js 15",
-          "TypeScript",
-          "Tailwind CSS",
-          "shadcn/ui",
-          "Zustand",
-          "Express.js",
-          "Node.js",
-          "PostgreSQL"
-        ]
-      },
-      {
-        "name": "CV Generator — Optimizador de CVs con IA",
-        "url": "",
-        "description": "Herramienta que adapta un CV a cualquier descripción de puesto usando Claude, GPT-4 o Gemini como proveedores intercambiables. Implementa scoring ATS con análisis de keywords por categoría, reglas de sustitución de tecnologías en dos niveles (Tier 1/Tier 2), y generación de PDF con templates Jinja2. Multi-proveedor con fallback automático.",
-        "technologies": [
-          "FastAPI",
-          "Python",
-          "Claude API",
-          "OpenAI API",
-          "Gemini API",
-          "Jinja2",
-          "PyMuPDF",
-          "xhtml2pdf"
-        ]
-      },
-      {
-        "name": "Altavida — Sitio Web para Cliente",
-        "url": "",
-        "description": "Sitio web en producción para estudio de masajes en Cali. Arquitectura estática con Astro y una isla React para el flujo de reservas. Sistema de contenido editable desde un único archivo de configuración para facilitar actualizaciones sin conocimientos técnicos del cliente.",
-        "technologies": [
-          "Astro",
-          "React",
-          "TypeScript",
-          "CSS"
-        ]
-      }
-    ],
+    "projects": [],
     "skills": [
       "Python",
       "FastAPI",
@@ -155,10 +118,19 @@
         "WordPress",
         "React",
         "JavaScript",
+        "TypeScript",
+        "Next.js",
+        "Astro",
+        "Tailwind CSS",
+        "shadcn/ui",
+        "Zustand",
+        "Node.js",
+        "Express.js",
+        "PostgreSQL",
+        "MySQL",
         "Linux",
         "Oracle Cloud (OCI)",
         "AWS",
-        "MySQL",
         "Apache",
         "Nginx",
         "Docker",
@@ -174,7 +146,9 @@
         "Managed and maintained a full production website end-to-end as sole responsible developer",
         "Coordinated multidisciplinary team including designers, DB specialists, and infrastructure",
         "Implemented UI/UX improvements and optimizations that reduced load time by 10x",
-        "Deep Linux administration: server config, deployments, security, automation"
+        "Deep Linux administration: server config, deployments, security, automation",
+        "Built full-stack enterprise management platform for client: payroll module with automatic benefits calculation, attendance control, project budgeting, and PDF report generation",
+        "Delivered production website for client with static Astro architecture and React island for online booking system, with self-editable content panel"
       ]
     },
     "Grupo Vidawa": {

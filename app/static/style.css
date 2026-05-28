@@ -172,12 +172,13 @@ select {
 
 .ats-score {
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
 }
 
 .score-value {
   font-size: 48px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .score-value.high { color: var(--success); }
@@ -186,6 +187,57 @@ select {
 
 .score-label {
   font-size: 14px;
+  color: var(--text-light);
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* Before / After comparison */
+.ats-score-compare {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.score-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.score-side-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+}
+
+.score-value-before {
+  font-size: 32px;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.score-delta {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #e8f5e9;
+  color: var(--success);
+  white-space: nowrap;
+}
+
+.score-delta.negative {
+  background: #fbe9e7;
+  color: var(--danger);
+}
+
+.score-delta.neutral {
+  background: var(--bg);
   color: var(--text-light);
 }
 
@@ -284,14 +336,23 @@ select {
   background: var(--border);
   border-radius: 4px;
   overflow: hidden;
+  position: relative;
 }
 
 .breakdown-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
   background: var(--accent);
   border-radius: 4px;
   transition: width 0.6s ease;
   width: 0%;
+}
+
+.breakdown-fill-before {
+  background: #b0bec5;
+  opacity: 0.6;
 }
 
 .breakdown-pct {

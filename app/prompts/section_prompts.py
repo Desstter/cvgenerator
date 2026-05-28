@@ -17,7 +17,7 @@ TONE: assert ("I built/led"), never aspire ("looking to/eager to"). Every claim 
 TASK 1 — ANALYZE the job description and return structured data.
 TASK 2 — ADAPT the CV to match the job description.
 
-Return a JSON object with exactly two keys: "job_analysis" and "adapted_cv".
+Return a JSON object with exactly three keys: "job_analysis", "adapted_cv", and "keyword_equivalences".
 
 JOB ANALYSIS fields (extract from the job description):
 - title: job title
@@ -27,6 +27,14 @@ JOB ANALYSIS fields (extract from the job description):
 - keywords: other important keywords
 - responsibilities: main responsibilities list
 - detected_language: "en" or "es"
+
+KEYWORD EQUIVALENCES (semantic enrichment for ATS scoring):
+- Map each job keyword (required/preferred/general) to other terms in the CV that mean the same thing
+  for this specific role, OR to terms the LLM knows are industry-equivalent.
+- Format: {{"canonical_job_term": ["equivalent1", "equivalent2", ...]}}
+- Examples: {{"React": ["ReactJS", "React.js"], "CI/CD pipelines": ["GitHub Actions", "Jenkins"]}}
+- ONLY include equivalences a recruiter would accept as the same thing. Do NOT stretch (e.g. do NOT
+  map "Python" to "JavaScript"). When in doubt, leave it out — an empty object is valid.
 
 CV ADAPTATION RULES:
 - NEVER change: company names, dates, education, contact info

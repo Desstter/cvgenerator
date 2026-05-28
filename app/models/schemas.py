@@ -86,6 +86,7 @@ class AdaptationResult(BaseModel):
     original_cv: CVData
     adapted_cv: CVData
     ats_score: ATSScore
+    original_ats_score: ATSScore = Field(default_factory=ATSScore)
     pdf_filename: str = ""
     tech_swaps: list[str] = Field(default_factory=list)
     job_analysis: dict = Field(default_factory=dict)

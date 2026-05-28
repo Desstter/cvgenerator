@@ -1,4 +1,3 @@
-import json
 import shutil
 import time
 import uuid
@@ -14,7 +13,7 @@ from app.config import settings
 from app.models.schemas import CVData, AdaptationResult, BaseCVStore
 from app.services.pdf_parser import extract_as_markdown
 from app.services.cv_analyzer import analyze_cv_rule_based, is_parse_sufficient, validate_cv_data
-from app.services.ai_adapter import get_provider, analyze_job, adapt_cv, parse_cv_with_ai, analyze_and_adapt
+from app.services.ai_adapter import get_provider, parse_cv_with_ai, analyze_and_adapt
 from app.services.history import load_history, save_application, delete_application
 from app.services.base_cv_store import load_base_cv, save_base_cv, build_real_context
 from app.services.ats_optimizer import analyze_keyword_match, reorder_skills
@@ -119,7 +118,9 @@ async def adapt_cv_endpoint(
             provider = get_provider(provider_name or None)
 
         # Analyze job and adapt CV in a single API call
-        job, adapted_cv = analyze_and_adapt(provider, cv, job_description, real_context=real_context)
+        job, adapted_cv, equivalences = analyze_and_adapt(
+            provider, cv, job_description, real_context=real_context
+        )
 
         # Detect technology substitutions
         tech_swaps = []
@@ -131,10 +132,11 @@ async def adapt_cv_endpoint(
             for old_t, new_t in zip(removed, added):
                 tech_swaps.append(f"{old_t} → {new_t}")
 
-        # ATS optimization
+        # ATS optimization — score BEFORE adaptation (baseline) and AFTER (final)
         all_job_keywords = job.required_skills + job.preferred_skills + job.keywords
-        adapted_cv.skills = reorder_skills(adapted_cv.skills, all_job_keywords)
-        ats_score = analyze_keyword_match(adapted_cv, job)
+        original_ats_score = analyze_keyword_match(cv, job, extra_synonyms=equivalences)
+        adapted_cv.skills = reorder_skills(adapted_cv.skills, all_job_keywords, extra_synonyms=equivalences)
+        ats_score = analyze_keyword_match(adapted_cv, job, extra_synonyms=equivalences)
 
         # Build job analysis summary
         job_analysis = {
@@ -174,6 +176,7 @@ async def adapt_cv_endpoint(
             original_cv=cv,
             adapted_cv=adapted_cv,
             ats_score=ats_score,
+            original_ats_score=original_ats_score,
             pdf_filename=output_path.name,
             tech_swaps=tech_swaps,
             job_analysis=job_analysis,

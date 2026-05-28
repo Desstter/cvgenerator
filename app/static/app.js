@@ -10,6 +10,8 @@ const progressText = document.getElementById('progress-text');
 const resultsSection = document.getElementById('results-section');
 const errorMsg = document.getElementById('error-msg');
 const scoreValue = document.getElementById('score-value');
+const scoreValueBefore = document.getElementById('score-value-before');
+const scoreDelta = document.getElementById('score-delta');
 const matchedKeywords = document.getElementById('matched-keywords');
 const missingKeywords = document.getElementById('missing-keywords');
 const suggestionsBox = document.getElementById('suggestions-box');
@@ -172,27 +174,52 @@ adaptBtn.addEventListener('click', async () => {
   }
 });
 
-function setBreakdownBar(fillId, pctId, score) {
+function setBreakdownBar(fillId, beforeFillId, pctId, scoreAfter, scoreBefore) {
   const fill = document.getElementById(fillId);
+  const fillBefore = document.getElementById(beforeFillId);
   const pct = document.getElementById(pctId);
-  fill.style.width = score + '%';
-  pct.textContent = score.toFixed(0) + '%';
-  fill.style.background = score >= 70 ? 'var(--success)' : score >= 40 ? '#f57c00' : 'var(--danger)';
+  fill.style.width = scoreAfter + '%';
+  if (fillBefore) fillBefore.style.width = scoreBefore + '%';
+  pct.textContent = scoreAfter.toFixed(0) + '%';
+  fill.style.background = scoreAfter >= 70 ? 'var(--success)' : scoreAfter >= 40 ? '#f57c00' : 'var(--danger)';
+}
+
+function setOverallScore(scoreAfter, scoreBefore) {
+  scoreValue.textContent = scoreAfter.toFixed(0) + '%';
+  scoreValue.className = 'score-value ' +
+    (scoreAfter >= 70 ? 'high' : scoreAfter >= 40 ? 'medium' : 'low');
+
+  scoreValueBefore.textContent = scoreBefore.toFixed(0) + '%';
+
+  const delta = scoreAfter - scoreBefore;
+  const rounded = Math.round(delta);
+  if (rounded > 0) {
+    scoreDelta.textContent = '+' + rounded;
+    scoreDelta.className = 'score-delta';
+  } else if (rounded < 0) {
+    scoreDelta.textContent = String(rounded);
+    scoreDelta.className = 'score-delta negative';
+  } else {
+    scoreDelta.textContent = '±0';
+    scoreDelta.className = 'score-delta neutral';
+  }
 }
 
 function showResults(result) {
   resultsSection.style.display = 'block';
 
-  // Overall score
-  const score = result.ats_score.overall_score;
-  scoreValue.textContent = score.toFixed(0) + '%';
-  scoreValue.className = 'score-value ' +
-    (score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low');
+  // Overall score — before vs after
+  const after = result.ats_score || {};
+  const before = result.original_ats_score || {};
+  setOverallScore(after.overall_score || 0, before.overall_score || 0);
 
-  // ATS breakdown by category
-  setBreakdownBar('req-fill', 'req-pct', result.ats_score.required_score || 0);
-  setBreakdownBar('pref-fill', 'pref-pct', result.ats_score.preferred_score || 0);
-  setBreakdownBar('gen-fill', 'gen-pct', result.ats_score.general_score || 0);
+  // ATS breakdown by category (before bar behind, after bar in front)
+  setBreakdownBar('req-fill', 'req-fill-before', 'req-pct',
+    after.required_score || 0, before.required_score || 0);
+  setBreakdownBar('pref-fill', 'pref-fill-before', 'pref-pct',
+    after.preferred_score || 0, before.preferred_score || 0);
+  setBreakdownBar('gen-fill', 'gen-fill-before', 'gen-pct',
+    after.general_score || 0, before.general_score || 0);
 
   // Matched keywords
   matchedKeywords.innerHTML = '';

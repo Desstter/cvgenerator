@@ -14,12 +14,11 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     gemini_fallback_models: list[str] = [
         "gemini-2.0-flash",
-        "gemini-1.5-flash",
         "gemini-2.0-flash-lite",
     ]
 
     # Token limits per model
-    claude_max_tokens: int = 8192
+    claude_max_tokens: int = 16384
     openai_max_tokens: int = 4096
     gemini_max_tokens: int = 8192
 
