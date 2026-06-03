@@ -1,5 +1,82 @@
 [
   {
+    "id": "ebd9de72",
+    "date": "2026-06-02T16:03:10.002346",
+    "job_title": "Backend Developer",
+    "company": "Unknown Company",
+    "ats_score": 52.6,
+    "required_score": 50.0,
+    "preferred_score": 100.0,
+    "pdf_filename": "cv_822ef864.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "43444c42",
+    "date": "2026-06-02T15:57:28.579741",
+    "job_title": "Fullstack Developer",
+    "company": "Unknown Company",
+    "ats_score": 49.6,
+    "required_score": 47.1,
+    "preferred_score": 30.0,
+    "pdf_filename": "cv_6e5111a5.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "a91bf64d",
+    "date": "2026-06-02T15:54:48.000926",
+    "job_title": "Backend Engineer / Cloud Engineer",
+    "company": "Unknown Company",
+    "ats_score": 67.6,
+    "required_score": 86.7,
+    "preferred_score": 22.2,
+    "pdf_filename": "cv_0a0ff1a0.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "55b350c2",
+    "date": "2026-06-02T15:51:07.857730",
+    "job_title": "Desarrollador Frontend",
+    "company": "Unknown Company",
+    "ats_score": 66.7,
+    "required_score": 100.0,
+    "preferred_score": 55.6,
+    "pdf_filename": "cv_3a4106d0.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "e61d5f9a",
+    "date": "2026-06-01T15:05:57.448295",
+    "job_title": "Frontend Developer",
+    "company": "Unknown Company",
+    "ats_score": 77.1,
+    "required_score": 100.0,
+    "preferred_score": 72.7,
+    "pdf_filename": "cv_f43066a4.pdf",
+    "detected_language": "en"
+  },
+  {
+    "id": "7cc02d64",
+    "date": "2026-06-01T14:42:18.928623",
+    "job_title": "Desarrollador Web",
+    "company": "Unknown Company",
+    "ats_score": 92.0,
+    "required_score": 91.7,
+    "preferred_score": 0.0,
+    "pdf_filename": "cv_1e055f4a.pdf",
+    "detected_language": "es"
+  },
+  {
+    "id": "09cb0b0b",
+    "date": "2026-06-01T14:36:23.818262",
+    "job_title": "Desarrollador Fullstack",
+    "company": "Tekton Labs",
+    "ats_score": 67.6,
+    "required_score": 90.0,
+    "preferred_score": 16.7,
+    "pdf_filename": "cv_9f0f96e6.pdf",
+    "detected_language": "es"
+  },
+  {
     "id": "af446425",
     "date": "2026-05-28T13:17:51.897019",
     "job_title": "Desarrollador IA / Ingeniero de Machine Learning",
