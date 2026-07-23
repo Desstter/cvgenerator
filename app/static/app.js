@@ -7,8 +7,13 @@ const templateSelect = document.getElementById('template-select');
 const providerSelect = document.getElementById('provider-select');
 const progressSection = document.getElementById('progress-section');
 const progressText = document.getElementById('progress-text');
+const progressElapsed = document.getElementById('progress-elapsed');
 const resultsSection = document.getElementById('results-section');
 const errorMsg = document.getElementById('error-msg');
+const errorMsgText = document.getElementById('error-msg-text');
+const errorTrace = document.getElementById('error-trace');
+const errorTracePre = document.getElementById('error-trace-pre');
+const errorClose = document.getElementById('error-close');
 const scoreValue = document.getElementById('score-value');
 const scoreValueBefore = document.getElementById('score-value-before');
 const scoreDelta = document.getElementById('score-delta');
@@ -99,20 +104,207 @@ function updateButton() {
 
 jobDesc.addEventListener('input', updateButton);
 
-function showError(msg) {
-  errorMsg.textContent = msg;
+let errorHideTimer = null;
+
+// msg: string. detail: optional traceback string shown in an expandable block.
+// Errors with a traceback stay on screen until dismissed.
+function showError(msg, detail) {
+  clearTimeout(errorHideTimer);
+  errorMsgText.textContent = msg;
+  if (detail) {
+    errorTracePre.textContent = detail;
+    errorTrace.style.display = 'block';
+    errorTrace.open = false;
+  } else {
+    errorTrace.style.display = 'none';
+    errorHideTimer = setTimeout(hideError, 10000);
+  }
   errorMsg.style.display = 'block';
-  setTimeout(() => { errorMsg.style.display = 'none'; }, 8000);
+  errorMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+function hideError() {
+  errorMsg.style.display = 'none';
+}
+
+errorClose.addEventListener('click', hideError);
+
+// Normalize a failed fetch Response into {message, traceback}
+async function parseApiError(response) {
+  let message = `HTTP ${response.status} ${response.statusText}`;
+  let traceback = '';
+  try {
+    const err = await response.json();
+    const d = err.detail;
+    if (typeof d === 'string') message = d;
+    else if (d && typeof d === 'object') {
+      message = d.message || message;
+      traceback = d.traceback || '';
+    }
+  } catch (_) { /* non-JSON body */ }
+  return { message, traceback };
+}
+
+let progressTimer = null;
 
 function showProgress(msg) {
   progressSection.style.display = 'block';
   resultsSection.style.display = 'none';
   progressText.textContent = msg;
+  progressElapsed.textContent = '';
+  const started = performance.now();
+  clearInterval(progressTimer);
+  progressTimer = setInterval(() => {
+    progressElapsed.textContent = ((performance.now() - started) / 1000).toFixed(1) + 's elapsed';
+  }, 250);
 }
 
 function hideProgress() {
   progressSection.style.display = 'none';
+  clearInterval(progressTimer);
+  progressTimer = null;
+}
+
+// ── Activity console ─────────────────────────────────────────────────────────
+// Live mirror of everything the backend does: API calls, retries, model
+// fallbacks, JSON repairs, and errors with full tracebacks.
+
+const consoleBody = document.getElementById('console-body');
+const consoleOutput = document.getElementById('console-output');
+const consoleToggleBtn = document.getElementById('console-toggle-btn');
+const consoleClearBtn = document.getElementById('console-clear-btn');
+const consoleBadge = document.getElementById('console-badge');
+const consoleHeader = document.getElementById('console-header');
+
+let lastSeq = 0;
+let consoleErrorCount = 0;
+let adapting = false;
+let pollTimer = null;
+let pollInFlight = false;
+
+function setConsoleOpen(open) {
+  consoleBody.style.display = open ? 'block' : 'none';
+  consoleToggleBtn.textContent = open ? 'Hide' : 'Show';
+}
+
+function consoleIsOpen() {
+  return consoleBody.style.display !== 'none';
+}
+
+consoleToggleBtn.addEventListener('click', () => setConsoleOpen(!consoleIsOpen()));
+consoleHeader.addEventListener('click', (e) => {
+  if (e.target.closest('button')) return;
+  setConsoleOpen(!consoleIsOpen());
+});
+
+consoleClearBtn.addEventListener('click', async () => {
+  try { await fetch('/api/events', { method: 'DELETE' }); } catch (_) {}
+  consoleOutput.innerHTML = '';
+  consoleErrorCount = 0;
+  consoleBadge.style.display = 'none';
+});
+
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  return d.toTimeString().slice(0, 8) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+}
+
+function renderEvent(evt) {
+  const line = document.createElement('div');
+  line.className = 'console-line lvl-' + evt.level;
+
+  const time = document.createElement('span');
+  time.className = 'console-time';
+  time.textContent = fmtTime(evt.ts);
+
+  const stage = document.createElement('span');
+  stage.className = 'console-stage';
+  stage.textContent = evt.stage;
+
+  const msg = document.createElement('span');
+  msg.className = 'console-msg';
+  msg.textContent = evt.message;
+
+  line.append(time, stage, msg);
+
+  if (evt.detail) {
+    const det = document.createElement('details');
+    det.className = 'console-detail';
+    const sum = document.createElement('summary');
+    sum.textContent = 'traceback / detail';
+    const pre = document.createElement('pre');
+    pre.textContent = evt.detail;
+    det.append(sum, pre);
+    line.appendChild(det);
+  }
+
+  consoleOutput.appendChild(line);
+
+  if (evt.level === 'error') {
+    consoleErrorCount++;
+    consoleBadge.textContent = consoleErrorCount + (consoleErrorCount === 1 ? ' error' : ' errors');
+    consoleBadge.style.display = 'inline-block';
+  }
+}
+
+let pollFailStreak = 0;
+
+// Surface polling problems IN the console instead of failing silently —
+// one line per failure streak, not one per poll.
+function notePollProblem(msg) {
+  pollFailStreak++;
+  if (pollFailStreak !== 1) return;
+  renderEvent({
+    seq: 0,
+    ts: Date.now() / 1000,
+    level: 'error',
+    stage: 'frontend',
+    message: msg,
+    detail: '',
+  });
+  consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+async function pollEvents() {
+  if (pollInFlight) return;
+  pollInFlight = true;
+  try {
+    const res = await fetch('/api/events?since=' + lastSeq);
+    if (!res.ok) {
+      notePollProblem(
+        `/api/events responded HTTP ${res.status} — the running server predates this feature. ` +
+        'Restart it: python -m uvicorn app.main:app --reload'
+      );
+      return;
+    }
+    pollFailStreak = 0;
+    const events = await res.json();
+    if (!events.length) return;
+
+    const atBottom = consoleOutput.scrollHeight - consoleOutput.scrollTop - consoleOutput.clientHeight < 40;
+    events.forEach(renderEvent);
+    lastSeq = events[events.length - 1].seq;
+
+    // Trim very old lines so the DOM stays light
+    while (consoleOutput.childElementCount > 1500) consoleOutput.firstElementChild.remove();
+    if (atBottom) consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+    // Live progress: mirror the latest backend event while adapting
+    if (adapting) {
+      const last = events[events.length - 1];
+      progressText.textContent = last.message;
+    }
+  } catch (e) {
+    notePollProblem('Cannot reach the server for live events: ' + e.message);
+  } finally {
+    pollInFlight = false;
+    schedulePoll();
+  }
+}
+
+function schedulePoll() {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(pollEvents, adapting ? 500 : 2500);
 }
 
 // Adapt CV
@@ -120,9 +312,14 @@ adaptBtn.addEventListener('click', async () => {
   if (!jobDesc.value.trim()) return;
   if (useCustomCv.checked && !selectedFile) return;
 
-  errorMsg.style.display = 'none';
-  showProgress('Analyzing job description...');
+  hideError();
+  showProgress('Contacting server…');
   adaptBtn.disabled = true;
+  adaptBtn.textContent = 'Generating…';
+  adapting = true;
+  setConsoleOpen(true);
+  clearTimeout(pollTimer);
+  pollEvents();
 
   const formData = new FormData();
   formData.append('job_description', jobDesc.value.trim());
@@ -134,31 +331,16 @@ adaptBtn.addEventListener('click', async () => {
   }
 
   try {
-    const steps = [
-      'Analyzing job description...',
-      'Adapting CV with AI...',
-      'Swapping technologies to match role...',
-      'Optimizing for ATS...',
-      'Generating PDF...',
-    ];
-    let stepIdx = 0;
-    const stepInterval = setInterval(() => {
-      stepIdx++;
-      if (stepIdx < steps.length) {
-        progressText.textContent = steps[stepIdx];
-      }
-    }, 3000);
-
     const response = await fetch('/api/adapt', {
       method: 'POST',
       body: formData,
     });
 
-    clearInterval(stepInterval);
-
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || 'Server error');
+      const { message, traceback } = await parseApiError(response);
+      const e = new Error(message);
+      e.traceback = traceback;
+      throw e;
     }
 
     const result = await response.json();
@@ -167,10 +349,15 @@ adaptBtn.addEventListener('click', async () => {
     loadHistory();
   } catch (err) {
     hideProgress();
-    showError(err.message || 'An error occurred. Please try again.');
+    showError(err.message || 'An error occurred. Please try again.', err.traceback || '');
   } finally {
+    adapting = false;
     adaptBtn.disabled = false;
+    adaptBtn.textContent = 'Generate Adapted CV';
     updateButton();
+    // One last poll so the final events (or the error) land in the console
+    clearTimeout(pollTimer);
+    setTimeout(pollEvents, 300);
   }
 });
 
@@ -661,13 +848,15 @@ async function saveCvStore(refs, saveBtn) {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to save CV');
+      const { message, traceback } = await parseApiError(res);
+      const e = new Error(message || 'Failed to save CV');
+      e.traceback = traceback;
+      throw e;
     }
     cvStore = await res.json();
     showSuccess('CV saved.');
   } catch (err) {
-    showError(err.message || 'Could not save your CV');
+    showError(err.message || 'Could not save your CV', err.traceback || '');
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Save CV';
@@ -675,3 +864,4 @@ async function saveCvStore(refs, saveBtn) {
 }
 
 loadHistory();
+pollEvents();

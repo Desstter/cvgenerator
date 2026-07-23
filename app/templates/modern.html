@@ -2,74 +2,86 @@
 <html lang="{{ cv.detected_language }}">
 <head>
 <meta charset="UTF-8">
+<title>{{ cv.contact.name }} — CV</title>
 <style>
   @page {
     size: A4;
-    margin: 1.5cm 2cm;
+    margin: 1.4cm 1.8cm;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body {
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 10pt;
-    line-height: 1.5;
+    line-height: 1.45;
     color: #2d2d2d;
   }
+  a { color: #1a1a2e; text-decoration: none; }
   h1 {
-    font-size: 22pt;
-    font-weight: bold;
+    font-size: 21pt;
+    font-weight: 700;
     color: #1a1a2e;
-    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+    margin-bottom: 3px;
+  }
+  .headline {
+    font-size: 11pt;
+    color: #444;
+    margin-bottom: 6px;
   }
   .contact-info {
     color: #555;
     font-size: 9pt;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
     border-bottom: 2px solid #1a1a2e;
   }
+  .contact-info a { font-weight: 600; }
+  .sep { color: #bbb; padding: 0 3px; }
   h2 {
-    font-size: 12pt;
-    font-weight: bold;
+    font-size: 11.5pt;
+    font-weight: 700;
     color: #1a1a2e;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 14px;
+    letter-spacing: 1.2px;
+    margin-top: 13px;
     margin-bottom: 6px;
     padding-bottom: 3px;
     border-bottom: 1px solid #ddd;
+    page-break-after: avoid;
+    break-after: avoid;
   }
   .summary {
     font-size: 10pt;
-    color: #444;
+    color: #3a3a3a;
     margin-bottom: 4px;
   }
-  .entry { margin-bottom: 10px; }
-  .entry-header {
-    margin-bottom: 2px;
+  .entry {
+    margin-bottom: 10px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
-  .entry-title { font-weight: bold; font-size: 10.5pt; }
-  .entry-company { color: #1a1a2e; font-weight: bold; }
+  .entry-header { margin-bottom: 2px; }
+  .entry-title { font-weight: 700; font-size: 10.5pt; }
+  .entry-company { color: #1a1a2e; font-weight: 600; }
   .entry-dates { color: #777; font-size: 9pt; float: right; }
   .entry-location { color: #777; font-size: 9pt; }
   .entry-desc { margin-top: 3px; padding-left: 14px; }
-  .entry-desc li { margin-bottom: 2px; }
+  .entry-desc li { margin-bottom: 2.5px; }
   .techs {
     font-size: 9pt;
     color: #555;
-    margin-top: 2px;
+    margin-top: 3px;
     padding-left: 14px;
   }
-  .skills-grid {
-    width: 100%;
-    border-collapse: collapse;
-  }
+  .skills-grid { width: 100%; border-collapse: collapse; }
   .skills-grid td {
     vertical-align: top;
     padding: 3px 0;
     font-size: 9.5pt;
   }
   .skills-grid .skill-category {
-    font-weight: bold;
+    font-weight: 700;
     color: #1a1a2e;
     width: 30%;
     padding-right: 8px;
@@ -77,34 +89,20 @@
     text-transform: uppercase;
     letter-spacing: 0.3px;
   }
-  .skills-grid .skill-items {
-    color: #444;
-  }
-  .skill-highlight {
-    font-weight: bold;
-    color: #1a1a2e;
-  }
+  .skills-grid .skill-items { color: #444; }
+  .skill-highlight { font-weight: 700; color: #1a1a2e; }
   .clearfix { clear: both; }
-  .contact-website {
-    font-weight: bold;
-    color: #1a1a2e;
-    font-size: 9.5pt;
-  }
-  .contact-location {
-    color: #999;
-    font-size: 8pt;
-  }
 </style>
 </head>
 <body>
   <h1>{{ cv.contact.name }}</h1>
   <div class="contact-info">
-    {% if cv.contact.email %}{{ cv.contact.email }}{% endif %}
-    {% if cv.contact.phone %} &middot; <img src="{{ icons_dir }}/phone.svg" width="9" height="9"/> {{ cv.contact.phone }}{% endif %}
-    {% if cv.contact.website %} &middot; <img src="{{ icons_dir }}/web.svg" width="10" height="10"/> <span class="contact-website">{{ cv.contact.website }}</span>{% endif %}
-    {% if cv.contact.github %} &middot; <img src="{{ icons_dir }}/github.svg" width="10" height="10"/> {{ cv.contact.github }}{% endif %}
-    {% if cv.contact.linkedin %} &middot; {{ cv.contact.linkedin }}{% endif %}
-    {% if cv.contact.location %} <span class="contact-location">&middot; {{ cv.contact.location }}</span>{% endif %}
+    {% if cv.contact.email %}<a href="mailto:{{ cv.contact.email }}">{{ cv.contact.email }}</a>{% endif %}
+    {% if cv.contact.phone %}<span class="sep">&middot;</span>{{ cv.contact.phone }}{% endif %}
+    {% if cv.contact.website %}<span class="sep">&middot;</span><a href="{{ cv.contact.website if cv.contact.website.startswith('http') else 'https://' + cv.contact.website }}">{{ cv.contact.website }}</a>{% endif %}
+    {% if cv.contact.github %}<span class="sep">&middot;</span><a href="{{ cv.contact.github if cv.contact.github.startswith('http') else 'https://' + cv.contact.github }}">{{ cv.contact.github }}</a>{% endif %}
+    {% if cv.contact.linkedin %}<span class="sep">&middot;</span><a href="{{ cv.contact.linkedin if cv.contact.linkedin.startswith('http') else 'https://' + cv.contact.linkedin }}">{{ cv.contact.linkedin }}</a>{% endif %}
+    {% if cv.contact.location %}<span class="sep">&middot;</span>{{ cv.contact.location }}{% endif %}
   </div>
 
   {% if cv.summary %}
@@ -142,7 +140,7 @@
   <h2>{{ "Proyectos" if cv.detected_language == "es" else "Projects" }}</h2>
   {% for proj in cv.projects %}
   <div class="entry">
-    <div class="entry-title">{{ proj.name }}</div>
+    <div class="entry-title">{% if proj.url %}<a href="{{ proj.url }}">{{ proj.name }}</a>{% else %}{{ proj.name }}{% endif %}</div>
     <p style="margin-top:2px;">{{ proj.description }}</p>
     {% if proj.technologies %}
     <div class="techs"><b>Tech:</b> {{ proj.technologies | join(', ') }}</div>
@@ -169,67 +167,58 @@
   {% if cv.skills %}
   <h2>{{ "Habilidades" if cv.detected_language == "es" else "Skills" }}</h2>
   <table class="skills-grid">
-    {% set ns = namespace(langs=[], frameworks=[], infra=[], tools=[], other=[]) %}
-    {% for skill in cv.skills %}
-      {% set s = skill.lower() %}
-      {% if s in ['php','python','javascript','typescript','java','c#','go','ruby','sql','html','css'] %}
-        {% set ns.langs = ns.langs + [skill] %}
-      {% elif s in ['vue.js','react','angular','next.js','node.js','express','django','flask','laravel','wordpress','jquery','tailwind','bootstrap'] %}
-        {% set ns.frameworks = ns.frameworks + [skill] %}
-      {% elif s in ['aws','oracle cloud (oci)','oracle cloud','docker','kubernetes','linux','nginx','apache','ci/cd','aws lambda','gcp','azure','serverless'] %}
-        {% set ns.infra = ns.infra + [skill] %}
-      {% elif s in ['git','github','gitlab','mysql','postgresql','mongodb','redis','rest apis','graphql','jira','figma','cpanel'] %}
-        {% set ns.tools = ns.tools + [skill] %}
-      {% else %}
-        {% set ns.other = ns.other + [skill] %}
+    {% if cv.skill_categories %}
+      {# Categories decided by the AI for this specific job #}
+      {% for cat in cv.skill_categories %}
+      {% if cat.skills %}
+      <tr>
+        <td class="skill-category">{{ cat.name }}</td>
+        <td class="skill-items">
+          {% for s in cat.skills %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+        </td>
+      </tr>
       {% endif %}
-    {% endfor %}
-    {% if ns.langs %}
-    <tr>
-      <td class="skill-category">{{ "Lenguajes" if cv.detected_language == "es" else "Languages" }}</td>
-      <td class="skill-items">
-        {% for s in ns.langs %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
-      </td>
-    </tr>
-    {% endif %}
-    {% if ns.frameworks %}
-    <tr>
-      <td class="skill-category">Frameworks</td>
-      <td class="skill-items">
-        {% for s in ns.frameworks %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
-      </td>
-    </tr>
-    {% endif %}
-    {% if ns.infra %}
-    <tr>
-      <td class="skill-category">{{ "Infraestructura" if cv.detected_language == "es" else "Infrastructure" }}</td>
-      <td class="skill-items">
-        {% for s in ns.infra %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
-      </td>
-    </tr>
-    {% endif %}
-    {% if ns.tools %}
-    <tr>
-      <td class="skill-category">{{ "Herramientas" if cv.detected_language == "es" else "Tools & DBs" }}</td>
-      <td class="skill-items">
-        {% for s in ns.tools %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
-      </td>
-    </tr>
-    {% endif %}
-    {% if ns.other %}
-    <tr>
-      <td class="skill-category">{{ "Otros" if cv.detected_language == "es" else "Other" }}</td>
-      <td class="skill-items">
-        {% for s in ns.other %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
-      </td>
-    </tr>
+      {% endfor %}
+    {% else %}
+      {# Fallback: keyword-based categorization when the AI didn't provide categories #}
+      {% set ns = namespace(langs=[], frameworks=[], infra=[], tools=[], other=[]) %}
+      {% for skill in cv.skills %}
+        {% set s = skill.lower() %}
+        {% if s in ['php','python','javascript','typescript','java','c#','go','ruby','sql','html','css'] %}
+          {% set ns.langs = ns.langs + [skill] %}
+        {% elif s in ['vue.js','react','angular','next.js','node.js','express','django','flask','laravel','wordpress','jquery','tailwind','bootstrap'] %}
+          {% set ns.frameworks = ns.frameworks + [skill] %}
+        {% elif s in ['aws','oracle cloud (oci)','oracle cloud','docker','kubernetes','linux','nginx','apache','ci/cd','aws lambda','gcp','azure','serverless'] %}
+          {% set ns.infra = ns.infra + [skill] %}
+        {% elif s in ['git','github','gitlab','mysql','postgresql','mongodb','redis','rest apis','graphql','jira','figma','cpanel'] %}
+          {% set ns.tools = ns.tools + [skill] %}
+        {% else %}
+          {% set ns.other = ns.other + [skill] %}
+        {% endif %}
+      {% endfor %}
+      {% for cat_name, cat_skills in [
+        ("Lenguajes" if cv.detected_language == "es" else "Languages", ns.langs),
+        ("Frameworks", ns.frameworks),
+        ("Infraestructura" if cv.detected_language == "es" else "Infrastructure", ns.infra),
+        ("Herramientas" if cv.detected_language == "es" else "Tools & DBs", ns.tools),
+        ("Otros" if cv.detected_language == "es" else "Other", ns.other),
+      ] %}
+      {% if cat_skills %}
+      <tr>
+        <td class="skill-category">{{ cat_name }}</td>
+        <td class="skill-items">
+          {% for s in cat_skills %}{% if s in matched_keywords %}<span class="skill-highlight">{{ s }}</span>{% else %}{{ s }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
     {% endif %}
   </table>
   {% endif %}
 
   {% if cv.certifications %}
   <h2>{{ "Certificaciones" if cv.detected_language == "es" else "Certifications" }}</h2>
-  <ul>
+  <ul style="padding-left:14px;">
     {% for cert in cv.certifications %}<li>{{ cert }}</li>{% endfor %}
   </ul>
   {% endif %}

@@ -50,10 +50,33 @@ TONE RULES (assert, don't aspire):
 - No aspirational or apologetic framing about skills the candidate lacks. The candidate is a strong fit, not an applicant begging for a chance.
 - Embellish to impress, but stay believable — every claim should survive an interview question.
 
+BULLET QUALITY RULES (every bullet must earn its 6 seconds of recruiter attention):
+- FORMULA: [Strong action verb] + [what was built/done, specific] + [measurable result or scope].
+  A bullet without at least two of those three parts is a weak bullet — rewrite it.
+- GOOD: "Rebuilt the order-processing pipeline in Node.js, cutting average checkout latency from 2.1s to 400ms for ~30K daily orders"
+- GOOD: "Led migration of 12 legacy PHP services to Laravel, reducing production incidents by 40%"
+- BAD: "Responsible for backend development" (no action, no specifics, no result)
+- BAD: "Helped improve the website performance" (weak verb, vague, unquantified)
+- BAD: "Worked with React to build components" (states a tool, not an accomplishment)
+- FORBIDDEN OPENERS: "Responsible for", "Helped", "Worked on/with", "Participated in",
+  "Assisted", "Involved in", "In charge of" (and their Spanish equivalents: "Responsable de",
+  "Ayudé a", "Trabajé en/con", "Participé en", "Encargado de").
+- QUANTIFY: where the original CV implies scale or results (users, requests, revenue, time saved,
+  team size, incident reduction), state the number. NEVER invent numbers not implied by the
+  original or the real context — an unverifiable metric is worse than none.
+- SPECIFICITY over breadth: name the system, the problem, and the outcome. "Improved performance"
+  is noise; "reduced p95 response time from 800ms to 200ms by adding Redis caching" is signal.
+
+LENGTH AND STRUCTURE RULES:
+- Summary: maximum 3 sentences. First sentence = role identity + years + core stack.
+  Second/third = the 1-2 differentiators most relevant to THIS job. No filler adjectives
+  ("passionate", "motivated", "results-driven" and equivalents are FORBIDDEN).
+- Most recent 1-2 roles: 4-5 bullets. Older roles: 2-3 bullets. Never pad a role to look bigger.
+- Order bullets within each role by relevance to the target job, not chronology.
+
 ATS OPTIMIZATION RULES:
 - Integrate the job's keywords naturally into real accomplishments. A keyword earns its place only when it describes work the candidate actually did — never as decoration.
 - Start bullet points with strong action verbs (Led, Developed, Implemented, Optimized, Designed, Built, Managed, Delivered)
-- Quantify achievements where the original CV implies measurable results
 - Use standard section headers that ATS systems recognize
 
 ANTI-STUFFING RULES (the CV must read like a human wrote it, not a keyword sprayer):

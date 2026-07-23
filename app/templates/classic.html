@@ -2,6 +2,7 @@
 <html lang="{{ cv.detected_language }}">
 <head>
 <meta charset="UTF-8">
+<title>{{ cv.contact.name }} — CV</title>
 <style>
   @page {
     size: A4;
@@ -14,6 +15,9 @@
     line-height: 1.4;
     color: #000;
   }
+  a { color: #000; text-decoration: none; }
+  h2 { page-break-after: avoid; break-after: avoid; }
+  .entry { page-break-inside: avoid; break-inside: avoid; }
   h1 {
     font-size: 20pt;
     text-align: center;
@@ -62,11 +66,11 @@
 <body>
   <h1>{{ cv.contact.name }}</h1>
   <div class="contact-info">
-    {% if cv.contact.email %}{{ cv.contact.email }}{% endif %}
-    {% if cv.contact.phone %} | <img src="{{ icons_dir }}/phone.svg" width="9" height="9"/> {{ cv.contact.phone }}{% endif %}
-    {% if cv.contact.website %} | <img src="{{ icons_dir }}/web.svg" width="10" height="10"/> <span class="contact-website">{{ cv.contact.website }}</span>{% endif %}
-    {% if cv.contact.github %} | <img src="{{ icons_dir }}/github.svg" width="10" height="10"/> {{ cv.contact.github }}{% endif %}
-    {% if cv.contact.linkedin %} | {{ cv.contact.linkedin }}{% endif %}
+    {% if cv.contact.email %}<a href="mailto:{{ cv.contact.email }}">{{ cv.contact.email }}</a>{% endif %}
+    {% if cv.contact.phone %} | {{ cv.contact.phone }}{% endif %}
+    {% if cv.contact.website %} | <a class="contact-website" href="{{ cv.contact.website if cv.contact.website.startswith('http') else 'https://' + cv.contact.website }}">{{ cv.contact.website }}</a>{% endif %}
+    {% if cv.contact.github %} | <a href="{{ cv.contact.github if cv.contact.github.startswith('http') else 'https://' + cv.contact.github }}">{{ cv.contact.github }}</a>{% endif %}
+    {% if cv.contact.linkedin %} | <a href="{{ cv.contact.linkedin if cv.contact.linkedin.startswith('http') else 'https://' + cv.contact.linkedin }}">{{ cv.contact.linkedin }}</a>{% endif %}
     {% if cv.contact.location %} <span class="contact-location">| {{ cv.contact.location }}</span>{% endif %}
   </div>
 

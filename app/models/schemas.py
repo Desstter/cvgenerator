@@ -36,6 +36,12 @@ class ProjectEntry(BaseModel):
     url: str = ""
 
 
+class SkillCategory(BaseModel):
+    """A named group of skills (e.g. "Languages", "Frameworks") decided by the AI."""
+    name: str = ""
+    skills: list[str] = Field(default_factory=list)
+
+
 class CVData(BaseModel):
     contact: ContactInfo = Field(default_factory=ContactInfo)
     summary: str = ""
@@ -43,6 +49,7 @@ class CVData(BaseModel):
     education: list[EducationEntry] = Field(default_factory=list)
     projects: list[ProjectEntry] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
+    skill_categories: list[SkillCategory] = Field(default_factory=list)
     certifications: list[str] = Field(default_factory=list)
     languages: list[str] = Field(default_factory=list)
     raw_markdown: str = ""

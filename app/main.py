@@ -1,5 +1,6 @@
 import shutil
 import time
+import traceback
 import uuid
 import logging
 from pathlib import Path
@@ -13,19 +14,38 @@ from app.config import settings
 from app.models.schemas import CVData, AdaptationResult, BaseCVStore
 from app.services.pdf_parser import extract_as_markdown
 from app.services.cv_analyzer import analyze_cv_rule_based, is_parse_sufficient, validate_cv_data
-from app.services.ai_adapter import get_provider, parse_cv_with_ai, analyze_and_adapt
+from app.services.ai_adapter import get_provider, parse_cv_with_ai, analyze_and_adapt, refine_cv
 from app.services.history import load_history, save_application, delete_application
 from app.services.base_cv_store import load_base_cv, save_base_cv, build_real_context
 from app.services.ats_optimizer import analyze_keyword_match, reorder_skills
 from app.services.pdf_generator import generate_pdf_from_template, generate_pdf_inplace
+from app.services.event_log import log_event, get_events, clear_events, install_logging_bridge, Timer
 
 logging.basicConfig(level=logging.INFO)
+install_logging_bridge()
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="CV Generator", version="2.0.0")
+
+def _error_detail(e: Exception, context: str) -> dict:
+    """Full error payload for the frontend: message + traceback (personal app,
+    everything is shown on screen)."""
+    tb = traceback.format_exc()
+    log_event(context, f"{type(e).__name__}: {e}", level="error", detail=tb)
+    return {"message": f"{type(e).__name__}: {e}", "traceback": tb}
+
+app = FastAPI(title="CV Generator", version="2.1.0")
 
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# First event on every boot: if the Activity Log shows nothing at page load,
+# the running server process predates the event-log feature.
+log_event(
+    "server",
+    f"Backend ready (v{app.version}) — provider={settings.ai_provider}, "
+    f"refine_pass={'on' if settings.refine_pass else 'off'}, event log active",
+    level="success",
+)
 
 
 def _cleanup_old_outputs():
@@ -44,13 +64,29 @@ async def index():
     return FileResponse(str(static_dir / "index.html"))
 
 
+@app.get("/api/events")
+async def api_events(since: int = 0):
+    """Live activity feed: every API call, retry, fallback and error with traceback."""
+    return get_events(since)
+
+
+@app.delete("/api/events")
+async def api_events_clear():
+    clear_events()
+    return {"ok": True}
+
+
 @app.post("/api/analyze")
-async def analyze_cv(file: UploadFile = File(...)):
-    """Upload a PDF and get the parsed CV structure back."""
+def analyze_cv(file: UploadFile = File(...)):
+    """Upload a PDF and get the parsed CV structure back.
+
+    Sync endpoint on purpose: FastAPI runs it in a threadpool so the blocking
+    AI/PDF work doesn't stall the event loop.
+    """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are accepted")
 
-    content = await file.read()
+    content = file.file.read()
     if len(content) > settings.max_upload_size_mb * 1024 * 1024:
         raise HTTPException(400, f"File too large (max {settings.max_upload_size_mb}MB)")
 
@@ -58,7 +94,8 @@ async def analyze_cv(file: UploadFile = File(...)):
     pdf_path.write_bytes(content)
 
     try:
-        markdown = extract_as_markdown(pdf_path)
+        with Timer("parse", f"Extracting text from {file.filename}"):
+            markdown = extract_as_markdown(pdf_path)
         cv = analyze_cv_rule_based(markdown)
 
         if not is_parse_sufficient(cv):
@@ -69,23 +106,33 @@ async def analyze_cv(file: UploadFile = File(...)):
         validate_cv_data(cv)
         return cv.model_dump(exclude={"raw_markdown"})
     except Exception as e:
-        logger.exception("Error analyzing CV")
-        raise HTTPException(500, f"Error analyzing CV: {str(e)}")
+        raise HTTPException(500, _error_detail(e, "analyze"))
     finally:
         pdf_path.unlink(missing_ok=True)
 
 
 @app.post("/api/adapt")
-async def adapt_cv_endpoint(
+def adapt_cv_endpoint(
     job_description: str = Form(...),
     file: Optional[UploadFile] = File(None),
     template: str = Form("modern"),
     provider_name: str = Form(""),
 ):
-    """Adapt CV to job description. PDF upload is optional — uses base CV if not provided."""
+    """Adapt CV to job description. PDF upload is optional — uses base CV if not provided.
+
+    Sync endpoint on purpose: FastAPI runs it in a threadpool so the long blocking
+    AI calls don't stall the event loop for other requests.
+    """
     _cleanup_old_outputs()
     pdf_path = None
     real_context = ""
+    started = time.perf_counter()
+    log_event(
+        "pipeline",
+        f"━━ New adaptation request (template={template}, "
+        f"provider={provider_name or settings.ai_provider}, "
+        f"job description: {len(job_description):,} chars) ━━",
+    )
 
     try:
         if file and file.filename:
@@ -93,15 +140,16 @@ async def adapt_cv_endpoint(
             if not file.filename.lower().endswith(".pdf"):
                 raise HTTPException(400, "Only PDF files are accepted")
 
-            content = await file.read()
+            content = file.file.read()
             if len(content) > settings.max_upload_size_mb * 1024 * 1024:
                 raise HTTPException(400, f"File too large (max {settings.max_upload_size_mb}MB)")
 
             pdf_path = settings.uploads_dir / f"{uuid.uuid4().hex}.pdf"
             pdf_path.write_bytes(content)
 
-            markdown = extract_as_markdown(pdf_path)
-            cv = analyze_cv_rule_based(markdown)
+            with Timer("parse", f"Parsing uploaded CV ({file.filename})"):
+                markdown = extract_as_markdown(pdf_path)
+                cv = analyze_cv_rule_based(markdown)
             provider = get_provider(provider_name or None)
 
             if not is_parse_sufficient(cv):
@@ -118,9 +166,24 @@ async def adapt_cv_endpoint(
             provider = get_provider(provider_name or None)
 
         # Analyze job and adapt CV in a single API call
-        job, adapted_cv, equivalences = analyze_and_adapt(
-            provider, cv, job_description, real_context=real_context
+        with Timer("ai", "Analyzing job & adapting CV (AI pass 1/2)"):
+            job, adapted_cv, equivalences = analyze_and_adapt(
+                provider, cv, job_description, real_context=real_context
+            )
+        log_event(
+            "ai",
+            f"Job detected: \"{job.title}\"{' at ' + job.company if job.company else ''} "
+            f"[{job.detected_language}] — {len(job.required_skills)} required / "
+            f"{len(job.preferred_skills)} preferred skills, "
+            f"{len(equivalences)} keyword equivalences",
         )
+
+        # Second pass: recruiter-style critique that rewrites weak bullets/summary
+        if settings.refine_pass:
+            with Timer("ai", "Recruiter critique & rewrite (AI pass 2/2)"):
+                adapted_cv = refine_cv(provider, adapted_cv, job)
+        else:
+            log_event("ai", "Refine pass disabled in config — skipping AI pass 2/2")
 
         # Detect technology substitutions
         tech_swaps = []
@@ -137,6 +200,14 @@ async def adapt_cv_endpoint(
         original_ats_score = analyze_keyword_match(cv, job, extra_synonyms=equivalences)
         adapted_cv.skills = reorder_skills(adapted_cv.skills, all_job_keywords, extra_synonyms=equivalences)
         ats_score = analyze_keyword_match(adapted_cv, job, extra_synonyms=equivalences)
+        log_event(
+            "ats",
+            f"ATS score: {original_ats_score.overall_score:.0f}% → {ats_score.overall_score:.0f}% "
+            f"({len(ats_score.matched_keywords)} matched, {len(ats_score.missing_keywords)} missing)",
+            level="success",
+        )
+        if tech_swaps:
+            log_event("ats", f"Tech substitutions: {', '.join(tech_swaps)}")
 
         # Build job analysis summary
         job_analysis = {
@@ -148,14 +219,16 @@ async def adapt_cv_endpoint(
         }
 
         # Generate PDF
-        if template == "original" and pdf_path:
-            output_path = generate_pdf_inplace(pdf_path, cv, adapted_cv)
-        else:
-            output_path = generate_pdf_from_template(
-                adapted_cv,
-                matched_keywords=ats_score.matched_keywords,
-                template_name=template,
-            )
+        with Timer("pdf", f"Generating PDF (template={template})"):
+            if template == "original" and pdf_path:
+                output_path = generate_pdf_inplace(pdf_path, cv, adapted_cv)
+            else:
+                output_path = generate_pdf_from_template(
+                    adapted_cv,
+                    matched_keywords=ats_score.matched_keywords,
+                    template_name=template,
+                    job_title=job.title,
+                )
 
         # Persist PDF to saved/ so it survives the 1-hour outputs/ cleanup
         saved_pdf = settings.saved_dir / output_path.name
@@ -182,28 +255,39 @@ async def adapt_cv_endpoint(
             job_analysis=job_analysis,
         )
 
+        log_event(
+            "pipeline",
+            f"━━ Done in {time.perf_counter() - started:.1f}s → {output_path.name} ━━",
+            level="success",
+        )
         return result.model_dump(exclude={"original_cv": {"raw_markdown"}, "adapted_cv": {"raw_markdown"}})
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.exception("Error adapting CV")
+        detail = _error_detail(e, "pipeline")
         err_msg = str(e).lower()
         if "quota" in err_msg or "rate" in err_msg or "429" in err_msg:
-            raise HTTPException(429, "AI provider rate limit exceeded. Wait a minute and try again, or switch to a different provider.")
-        raise HTTPException(500, f"Error adapting CV: {str(e)}")
+            detail["message"] = (
+                "AI provider rate limit exceeded. Wait a minute and try again, "
+                f"or switch provider. ({detail['message']})"
+            )
+            raise HTTPException(429, detail)
+        raise HTTPException(500, detail)
     finally:
         if pdf_path:
             pdf_path.unlink(missing_ok=True)
 
 
 @app.get("/api/base-cv")
-async def base_cv_pdf(template: str = "modern"):
+def base_cv_pdf(template: str = "modern"):
     """Generate and download the base CV with real technologies, no adaptation."""
     cv = load_base_cv().cv
     output_path = generate_pdf_from_template(cv, matched_keywords=[], template_name=template)
     return FileResponse(
         str(output_path),
         media_type="application/pdf",
-        filename="CV_Santiago_Hurtado_Base.pdf",
+        filename=output_path.name,
     )
 
 

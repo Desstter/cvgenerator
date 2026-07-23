@@ -548,12 +548,160 @@ select {
 /* Error */
 .error-msg {
   display: none;
-  padding: 12px;
+  position: relative;
+  padding: 12px 36px 12px 14px;
   background: #fbe9e7;
   color: var(--danger);
+  border: 1px solid #f4c7c3;
   border-radius: var(--radius);
   margin-bottom: 12px;
   font-size: 14px;
+}
+
+.error-msg-text {
+  font-weight: 600;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.error-trace { margin-top: 8px; }
+
+.error-trace summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.error-trace pre {
+  margin-top: 8px;
+  padding: 10px;
+  background: #1c1c28;
+  color: #ff8a80;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Activity console */
+.console-card { padding: 16px 24px; }
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.console-header h2 { margin-bottom: 0; }
+
+.console-actions { display: flex; gap: 8px; }
+
+.console-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: #ffebee;
+  color: var(--danger);
+  vertical-align: middle;
+}
+
+.console-body { margin-top: 12px; }
+
+.console-output {
+  background: #0d1117;
+  border-radius: 6px;
+  padding: 10px 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+
+.console-output:empty::before {
+  content: "No activity yet — generate a CV and every API call, retry and error will appear here.";
+  color: #8b949e;
+  font-style: italic;
+}
+
+.console-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  color: #c9d1d9;
+}
+
+.console-time { color: #8b949e; flex-shrink: 0; }
+
+.console-stage {
+  color: #79c0ff;
+  flex-shrink: 0;
+  min-width: 64px;
+  font-weight: 600;
+}
+
+.console-msg { white-space: pre-wrap; word-break: break-word; flex: 1; min-width: 200px; }
+
+.console-line.lvl-success .console-msg { color: #3fb950; }
+.console-line.lvl-warn .console-msg { color: #d29922; }
+.console-line.lvl-retry .console-msg { color: #ff9e64; font-weight: 600; }
+.console-line.lvl-error .console-msg { color: #f85149; font-weight: 600; }
+.console-line.lvl-api .console-msg { color: #58a6ff; }
+
+.console-detail {
+  flex-basis: 100%;
+  margin: 2px 0 6px 0;
+}
+
+.console-detail summary {
+  cursor: pointer;
+  color: #8b949e;
+  font-size: 11px;
+  user-select: none;
+}
+
+.console-detail pre {
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: #161b22;
+  border-left: 3px solid #f85149;
+  border-radius: 4px;
+  color: #ffa198;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.progress-elapsed {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-light);
+  font-variant-numeric: tabular-nums;
 }
 
 .success-msg {

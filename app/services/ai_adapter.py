@@ -1,20 +1,144 @@
 import json
 import re
+import time
 import logging
 from abc import ABC, abstractmethod
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from app.config import settings
-from app.models.schemas import CVData, JobDescription, ExperienceEntry, ProjectEntry
+from app.services.event_log import log_event
+from app.models.schemas import CVData, JobDescription, ExperienceEntry, ProjectEntry, SkillCategory
 from app.prompts.system_prompt import SYSTEM_PROMPT
 from app.prompts.section_prompts import (
     job_analysis_prompt,
     full_cv_adaptation_prompt,
     combined_analyze_adapt_prompt,
+    refine_cv_prompt,
 )
 from app.services.cv_analyzer import build_ai_parse_prompt, parse_ai_response_to_cv
 
 logger = logging.getLogger(__name__)
+
+
+def _str_list() -> dict:
+    return {"type": "array", "items": {"type": "string"}}
+
+
+# Strict JSON schema for the combined analyze+adapt call. Used natively by providers
+# with structured-output support (Claude); others rely on the prompt + json-repair.
+ANALYZE_ADAPT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "job_analysis": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "title": {"type": "string"},
+                "company": {"type": "string"},
+                "required_skills": _str_list(),
+                "preferred_skills": _str_list(),
+                "keywords": _str_list(),
+                "responsibilities": _str_list(),
+                "detected_language": {"type": "string", "enum": ["en", "es"]},
+            },
+            "required": ["title", "company", "required_skills", "preferred_skills",
+                         "keywords", "responsibilities", "detected_language"],
+        },
+        "keyword_equivalences": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"term": {"type": "string"}, "equivalents": _str_list()},
+                "required": ["term", "equivalents"],
+            },
+        },
+        "adapted_cv": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "summary": {"type": "string"},
+                "skills": _str_list(),
+                "skill_categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {"name": {"type": "string"}, "skills": _str_list()},
+                        "required": ["name", "skills"],
+                    },
+                },
+                "experience": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "title": {"type": "string"},
+                            "description": {"type": "string"},
+                            "technologies": _str_list(),
+                        },
+                        "required": ["title", "description", "technologies"],
+                    },
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "description": {"type": "string"},
+                            "technologies": _str_list(),
+                        },
+                        "required": ["description", "technologies"],
+                    },
+                },
+            },
+            "required": ["summary", "skills", "skill_categories", "experience", "projects"],
+        },
+    },
+    "required": ["job_analysis", "keyword_equivalences", "adapted_cv"],
+}
+
+REFINE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "summary": {"type": "string"},
+        "experience": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"description": {"type": "string"}},
+                "required": ["description"],
+            },
+        },
+        "projects": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"description": {"type": "string"}},
+                "required": ["description"],
+            },
+        },
+    },
+    "required": ["summary", "experience", "projects"],
+}
+
+
+def _log_before_sleep(retry_state) -> None:
+    """Tenacity hook: surface every retry (attempt, wait, cause) in the event log."""
+    exc = retry_state.outcome.exception() if retry_state.outcome else None
+    wait = getattr(retry_state.next_action, "sleep", 0) or 0
+    log_event(
+        "retry",
+        f"Attempt {retry_state.attempt_number} failed ({type(exc).__name__}: {exc}) — "
+        f"retrying in {wait:.1f}s",
+        level="retry",
+    )
 
 
 def _is_retryable_error(exception: Exception) -> bool:
@@ -31,12 +155,15 @@ def _is_retryable_error(exception: Exception) -> bool:
 
     if exc_name in ['APIConnectionError', 'APITimeoutError', 'RateLimitError',
                     'InternalServerError', 'ServiceUnavailableError',
-                    'ConnectionError', 'Timeout', 'ReadTimeout']:
+                    'ConnectionError', 'Timeout', 'ReadTimeout',
+                    # google.api_core exceptions (Gemini)
+                    'ResourceExhausted', 'ServiceUnavailable', 'DeadlineExceeded',
+                    'TooManyRequests', 'Aborted']:
         logger.info(f"Retrying {exc_name}: {exception}")
         return True
 
-    if hasattr(exception, 'status_code'):
-        status = exception.status_code
+    status = getattr(exception, 'status_code', None) or getattr(exception, 'code', None)
+    if isinstance(status, int):
         if status == 429 or (500 <= status < 600):
             logger.info(f"Retrying HTTP {status}: {exception}")
             return True
@@ -58,6 +185,43 @@ class AIProvider(ABC):
         return json.loads(_extract_json(response))
 
 
+class _APICall:
+    """Context manager that logs an outgoing API request and its outcome."""
+
+    def __init__(self, provider: str, model: str, prompt_chars: int, mode: str = "chat"):
+        self.label = f"{provider} · {model}"
+        self.prompt_chars = prompt_chars
+        self.mode = mode
+        self.start = 0.0
+
+    def __enter__(self):
+        log_event(
+            "api",
+            f"→ {self.label} [{self.mode}] request ({self.prompt_chars:,} prompt chars)",
+            level="api",
+        )
+        self.start = time.perf_counter()
+        return self
+
+    def done(self, response_chars: int):
+        elapsed = time.perf_counter() - self.start
+        log_event(
+            "api",
+            f"← {self.label} OK in {elapsed:.1f}s ({response_chars:,} response chars)",
+            level="success",
+        )
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is not None:
+            elapsed = time.perf_counter() - self.start
+            log_event(
+                "api",
+                f"✗ {self.label} failed after {elapsed:.1f}s — {exc_type.__name__}: {exc}",
+                level="error",
+            )
+        return False
+
+
 class ClaudeProvider(AIProvider):
     def __init__(self):
         import anthropic
@@ -70,16 +234,43 @@ class ClaudeProvider(AIProvider):
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=4),
         retry=retry_if_exception(_is_retryable_error),
+        before_sleep=_log_before_sleep,
         reraise=True
     )
     def chat(self, system: str, user: str) -> str:
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=self.config.claude_max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        return response.content[0].text
+        with _APICall("Claude", self.model, len(system) + len(user)) as call:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=self.config.claude_max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+            text = next(b.text for b in response.content if b.type == "text")
+            call.done(len(text))
+            return text
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+        retry=retry_if_exception(_is_retryable_error),
+        before_sleep=_log_before_sleep,
+        reraise=True
+    )
+    def chat_json(self, system: str, user: str, schema=None) -> dict:
+        """Use native structured outputs: the API guarantees the response matches the schema."""
+        if schema is None:
+            return super().chat_json(system, user)
+        with _APICall("Claude", self.model, len(system) + len(user), mode="json_schema") as call:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=self.config.claude_max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+                output_config={"format": {"type": "json_schema", "schema": schema}},
+            )
+            text = next(b.text for b in response.content if b.type == "text")
+            call.done(len(text))
+            return json.loads(text)
 
 
 class OpenAIProvider(AIProvider):
@@ -94,18 +285,45 @@ class OpenAIProvider(AIProvider):
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=4),
         retry=retry_if_exception(_is_retryable_error),
+        before_sleep=_log_before_sleep,
         reraise=True
     )
     def chat(self, system: str, user: str) -> str:
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            max_tokens=self.config.openai_max_tokens,
-        )
-        return response.choices[0].message.content
+        with _APICall("OpenAI", self.model, len(system) + len(user)) as call:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                max_tokens=self.config.openai_max_tokens,
+            )
+            text = response.choices[0].message.content
+            call.done(len(text or ""))
+            return text
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+        retry=retry_if_exception(_is_retryable_error),
+        before_sleep=_log_before_sleep,
+        reraise=True
+    )
+    def chat_json(self, system: str, user: str, schema=None) -> dict:
+        """Use OpenAI JSON mode so the response is guaranteed to be valid JSON."""
+        with _APICall("OpenAI", self.model, len(system) + len(user), mode="json") as call:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                max_tokens=self.config.openai_max_tokens,
+                response_format={"type": "json_object"},
+            )
+            text = response.choices[0].message.content
+            call.done(len(text or ""))
+            return json.loads(text)
 
 
 class GeminiProvider(AIProvider):
@@ -114,34 +332,66 @@ class GeminiProvider(AIProvider):
         genai.configure(api_key=settings.google_api_key)
         self.genai = genai
         self.config = settings
-        self._models = [settings.gemini_model] + settings.gemini_fallback_models
+        # dict.fromkeys dedupes while preserving order (env primary may repeat a fallback)
+        self._models = list(dict.fromkeys([settings.gemini_model] + settings.gemini_fallback_models))
+
+    # Errors that justify trying the next model in the fallback chain instead of
+    # aborting: quota/rate limits, missing models, and transient server overload.
+    _FALLBACK_KEYWORDS = (
+        "quota", "429", "rate", "resource", "not found", "404",
+        "503", "500", "overload", "unavailable", "internal", "deadline", "timeout",
+    )
 
     def _make_model(self, model_name: str):
         return self.genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
 
     def _generate(self, model_name: str, prompt: str, generation_config: dict):
         model = self._make_model(model_name)
-        return model.generate_content(prompt, generation_config=generation_config)
+        return model.generate_content(
+            prompt,
+            generation_config=generation_config,
+            request_options={"timeout": 120},
+        )
 
     def _run_with_fallback(self, prompt: str, generation_config: dict) -> str:
         last_error = None
         for model_name in self._models:
-            try:
-                response = self._generate(model_name, prompt, generation_config)
-                logger.info(f"Gemini response from: {model_name}")
-                return response.text
-            except Exception as e:
-                err_msg = str(e).lower()
-                if any(k in err_msg for k in ("quota", "429", "rate", "resource", "not found", "404")):
-                    logger.warning(f"Skipping {model_name}: {type(e).__name__}")
-                    last_error = e
-                    continue
-                raise
+            with _APICall("Gemini", model_name, len(prompt),
+                          mode=generation_config.get("response_mime_type", "chat")) as call:
+                try:
+                    response = self._generate(model_name, prompt, generation_config)
+                    text = response.text
+                    call.done(len(text))
+                    logger.info(f"Gemini response from: {model_name}")
+                    return text
+                except Exception as e:
+                    err_msg = str(e).lower()
+                    if any(k in err_msg for k in self._FALLBACK_KEYWORDS):
+                        log_event(
+                            "api",
+                            f"Gemini {model_name} unavailable ({type(e).__name__}: {e}) — "
+                            f"falling back to next model",
+                            level="warn",
+                        )
+                        last_error = e
+                        continue
+                    raise
+        log_event("api", "All Gemini models exhausted — giving up", level="error")
         raise last_error
+
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=2, min=2, max=8),
+        retry=retry_if_exception(_is_retryable_error),
+        before_sleep=_log_before_sleep,
+        reraise=True,
+    )
+    def _run_with_retry(self, prompt: str, generation_config: dict) -> str:
+        return self._run_with_fallback(prompt, generation_config)
 
     def chat(self, system: str, user: str) -> str:
         prompt = user if system == SYSTEM_PROMPT else f"{system}\n\n{user}"
-        return self._run_with_fallback(prompt, {"max_output_tokens": self.config.gemini_max_tokens})
+        return self._run_with_retry(prompt, {"max_output_tokens": self.config.gemini_max_tokens})
 
     def chat_json(self, system: str, user: str, schema=None) -> dict:
         # NOTE: response_schema is intentionally NOT used. On gemini-2.5-flash-lite
@@ -153,20 +403,26 @@ class GeminiProvider(AIProvider):
             "max_output_tokens": self.config.gemini_max_tokens,
             "response_mime_type": "application/json",
         }
-        text = self._run_with_fallback(prompt, config)
+        text = self._run_with_retry(prompt, config)
         return json.loads(_extract_json(text))
 
 
 def get_provider(name: str | None = None) -> AIProvider:
     provider_name = (name or settings.ai_provider).lower()
     if provider_name == "claude":
-        return ClaudeProvider()
+        provider = ClaudeProvider()
+        model = settings.claude_model
     elif provider_name == "openai":
-        return OpenAIProvider()
+        provider = OpenAIProvider()
+        model = settings.openai_model
     elif provider_name == "gemini":
-        return GeminiProvider()
+        provider = GeminiProvider()
+        model = " → ".join(provider._models)
     else:
+        log_event("provider", f"Unknown AI provider requested: {provider_name}", level="error")
         raise ValueError(f"Unknown AI provider: {provider_name}")
+    log_event("provider", f"Provider: {provider_name} ({model})")
+    return provider
 
 
 def _repair_json(candidate: str) -> str | None:
@@ -193,6 +449,11 @@ def _extract_json(text: str) -> str:
         except json.JSONDecodeError:
             repaired = _repair_json(candidate)
             if repaired:
+                log_event(
+                    "json", "Fenced JSON block was malformed; recovered via json-repair "
+                    "(response may be truncated — check the raw text)",
+                    level="warn", detail=candidate,
+                )
                 return repaired
 
     brace_count = 0
@@ -216,7 +477,11 @@ def _extract_json(text: str) -> str:
     # Last resort: repair the whole text (handles truncated/malformed responses)
     repaired = _repair_json(text)
     if repaired:
-        logger.warning("JSON was malformed; recovered via json-repair")
+        log_event(
+            "json", "JSON was malformed; recovered via json-repair "
+            "(response may be truncated — fields lost this way silently fall back to the original CV)",
+            level="warn", detail=text,
+        )
         return repaired
 
     return text
@@ -250,7 +515,17 @@ def _clean_none_values(obj):
 
 
 def _coerce_equivalences(raw) -> dict[str, list[str]]:
-    """Validate the LLM's keyword_equivalences. Drop anything malformed instead of raising."""
+    """Validate the LLM's keyword_equivalences. Drop anything malformed instead of raising.
+
+    Accepts both the list-of-objects format ([{"term": ..., "equivalents": [...]}]) and the
+    legacy dict format ({"term": [...]}).
+    """
+    if isinstance(raw, list):
+        converted = {}
+        for item in raw:
+            if isinstance(item, dict) and "term" in item:
+                converted[item["term"]] = item.get("equivalents", [])
+        raw = converted
     if not isinstance(raw, dict):
         return {}
     cleaned: dict[str, list[str]] = {}
@@ -283,7 +558,7 @@ def analyze_and_adapt(
         real_context=real_context,
     )
 
-    data = provider.chat_json(SYSTEM_PROMPT, prompt)
+    data = provider.chat_json(SYSTEM_PROMPT, prompt, schema=ANALYZE_ADAPT_SCHEMA)
     data = _clean_none_values(data)
     data = _strip_markdown(data)
 
@@ -299,10 +574,26 @@ def analyze_and_adapt(
         detected_language=job_data.get("detected_language", "en"),
     )
 
+    if not (job.required_skills or job.preferred_skills or job.keywords):
+        # Without keywords every ATS score is 0/0 — a silent, useless result.
+        # Fail loudly instead; the raw response is in the activity log.
+        raise ValueError(
+            "Job analysis extracted no skills or keywords — the AI response was likely "
+            "truncated or malformed. Check the JSON warnings in the activity log and retry."
+        )
+
     equivalences = _coerce_equivalences(data.get("keyword_equivalences"))
 
     cv_data = data.get("adapted_cv", {})
     detected_lang = job.detected_language or cv.detected_language
+
+    skill_categories = []
+    for cat in cv_data.get("skill_categories", []):
+        if isinstance(cat, dict) and cat.get("name") and isinstance(cat.get("skills"), list):
+            skill_categories.append(SkillCategory(
+                name=str(cat["name"]),
+                skills=[str(s) for s in cat["skills"] if s],
+            ))
 
     adapted = CVData(
         contact=cv.contact,
@@ -310,6 +601,7 @@ def analyze_and_adapt(
         experience=[],
         education=cv.education,
         skills=cv_data.get("skills", cv.skills),
+        skill_categories=skill_categories,
         certifications=cv.certifications,
         languages=cv.languages,
         raw_markdown=cv.raw_markdown,
@@ -345,6 +637,50 @@ def analyze_and_adapt(
             adapted.projects.append(orig)
 
     return job, adapted, equivalences
+
+
+def refine_cv(provider: AIProvider, adapted: CVData, job: JobDescription) -> CVData:
+    """Second AI pass: critique the adapted CV as a senior recruiter and rewrite weak parts.
+
+    Only summary and descriptions may change; structure, titles, and technologies are preserved.
+    Any failure returns the input CV unchanged — this pass must never break the pipeline.
+    """
+    try:
+        cv_dict = adapted.model_dump(
+            include={"summary": True, "experience": True, "projects": True}
+        )
+        prompt = refine_cv_prompt(
+            json.dumps(cv_dict, ensure_ascii=False, indent=2),
+            job_title=job.title or "the target role",
+            job_skills=job.required_skills + job.preferred_skills,
+            language=job.detected_language,
+        )
+        data = provider.chat_json(SYSTEM_PROMPT, prompt, schema=REFINE_SCHEMA)
+        data = _strip_markdown(_clean_none_values(data))
+
+        refined = adapted.model_copy(deep=True)
+        if isinstance(data.get("summary"), str) and data["summary"].strip():
+            refined.summary = data["summary"].strip()
+
+        refined_exp = data.get("experience", [])
+        if isinstance(refined_exp, list) and len(refined_exp) == len(refined.experience):
+            for entry, new in zip(refined.experience, refined_exp):
+                desc = new.get("description") if isinstance(new, dict) else None
+                if isinstance(desc, str) and desc.strip():
+                    entry.description = desc.strip()
+
+        refined_proj = data.get("projects", [])
+        if isinstance(refined_proj, list) and len(refined_proj) == len(refined.projects):
+            for entry, new in zip(refined.projects, refined_proj):
+                desc = new.get("description") if isinstance(new, dict) else None
+                if isinstance(desc, str) and desc.strip():
+                    entry.description = desc.strip()
+
+        logger.info("Refine pass applied")
+        return refined
+    except Exception:
+        logger.exception("Refine pass failed; keeping first-pass CV")
+        return adapted
 
 
 def analyze_job(provider: AIProvider, job_text: str) -> JobDescription:

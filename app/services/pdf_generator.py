@@ -1,4 +1,10 @@
+import logging
+import os
 import re
+import shutil
+import subprocess
+import tempfile
+import unicodedata
 import uuid
 import fitz
 from io import BytesIO
@@ -8,6 +14,8 @@ from xhtml2pdf import pisa
 
 from app.config import settings
 from app.models.schemas import CVData
+
+logger = logging.getLogger(__name__)
 
 # Month abbreviations keyed by lowercase source token, per target language.
 _MONTHS_TO_EN = {
@@ -77,12 +85,89 @@ def _localize_cv(cv: CVData) -> CVData:
     return out
 
 
+def _slugify(text: str, max_len: int = 40) -> str:
+    """ASCII-safe, underscore-separated slug for filenames."""
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_")
+    return text[:max_len].strip("_")
+
+
+def _build_filename(cv: CVData, job_title: str = "") -> str:
+    """Recruiter-facing filename: CV_Name_Surname_Job_Title.pdf."""
+    parts = ["CV"]
+    name_slug = _slugify(cv.contact.name)
+    if name_slug:
+        parts.append(name_slug)
+    title_slug = _slugify(job_title)
+    if title_slug:
+        parts.append(title_slug)
+    if len(parts) == 1:
+        parts.append(uuid.uuid4().hex[:8])
+    return "_".join(parts) + ".pdf"
+
+
+def _find_chromium() -> str | None:
+    """Locate a Chromium-based browser for high-quality HTML→PDF rendering."""
+    candidates = [
+        shutil.which("chrome"),
+        shutil.which("msedge"),
+        shutil.which("chromium"),
+        shutil.which("google-chrome"),
+        os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
+    ]
+    for c in candidates:
+        if c and Path(c).exists():
+            return c
+    return None
+
+
+def _render_pdf(html_content: str, output_path: Path) -> None:
+    """Render HTML to PDF with a headless Chromium browser (full modern CSS, clickable
+    links, proper fonts and page breaks). Falls back to xhtml2pdf if no browser is found."""
+    browser = _find_chromium()
+    if browser:
+        tmp_dir = Path(tempfile.mkdtemp(prefix="cvgen_"))
+        html_file = tmp_dir / "cv.html"
+        try:
+            html_file.write_text(html_content, encoding="utf-8")
+            cmd = [
+                browser,
+                "--headless",
+                "--disable-gpu",
+                "--no-pdf-header-footer",
+                f"--user-data-dir={tmp_dir / 'profile'}",
+                f"--print-to-pdf={output_path}",
+                html_file.as_uri(),
+            ]
+            result = subprocess.run(cmd, capture_output=True, timeout=60)
+            if output_path.exists() and output_path.stat().st_size > 0:
+                return
+            logger.warning(
+                "Chromium PDF rendering failed (rc=%s), falling back to xhtml2pdf: %s",
+                result.returncode, result.stderr.decode(errors="replace")[-300:],
+            )
+        except (OSError, subprocess.SubprocessError):
+            logger.exception("Chromium PDF rendering crashed, falling back to xhtml2pdf")
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    with open(str(output_path), "wb") as f:
+        pisa_status = pisa.CreatePDF(html_content, dest=f)
+        if pisa_status.err:
+            raise RuntimeError(f"PDF generation failed with {pisa_status.err} errors")
+
+
 def generate_pdf_from_template(
     cv: CVData,
     matched_keywords: list[str] | None = None,
     template_name: str = "modern",
+    job_title: str = "",
 ) -> Path:
-    """Generate a PDF from an HTML template using xhtml2pdf."""
+    """Generate a PDF from an HTML template."""
     cv = _localize_cv(cv)
     env = Environment(loader=FileSystemLoader(str(settings.templates_dir)))
     template = env.get_template(f"{template_name}.html")
@@ -95,14 +180,8 @@ def generate_pdf_from_template(
         icons_dir=icons_dir,
     )
 
-    output_filename = f"cv_{uuid.uuid4().hex[:8]}.pdf"
-    output_path = settings.outputs_dir / output_filename
-
-    with open(str(output_path), "wb") as f:
-        pisa_status = pisa.CreatePDF(html_content, dest=f)
-        if pisa_status.err:
-            raise RuntimeError(f"PDF generation failed with {pisa_status.err} errors")
-
+    output_path = settings.outputs_dir / _build_filename(cv, job_title)
+    _render_pdf(html_content, output_path)
     return output_path
 
 
