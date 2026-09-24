@@ -47,12 +47,16 @@ def test_slugify_strips_accents_and_symbols():
 
 def test_build_filename_with_name_and_title():
     cv = CVData(contact=ContactInfo(name="Ana María Gómez"))
-    assert _build_filename(cv, "Backend Developer") == "CV_Ana_Maria_Gomez_Backend_Developer.pdf"
+    first = _build_filename(cv, "Backend Developer")
+    second = _build_filename(cv, "Backend Developer")
+    assert first.startswith("CV_Ana_Maria_Gomez_Backend_Developer_")
+    assert first.endswith(".pdf")
+    assert first != second
 
 
 def test_build_filename_without_title():
     cv = CVData(contact=ContactInfo(name="Ana Gómez"))
-    assert _build_filename(cv) == "CV_Ana_Gomez.pdf"
+    assert _build_filename(cv).startswith("CV_Ana_Gomez_")
 
 
 def test_build_filename_empty_falls_back_to_unique():

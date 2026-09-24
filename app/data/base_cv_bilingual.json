@@ -1,0 +1,155 @@
+{
+  "profile_id": "bilingual_customer_service",
+  "display_name": "Bilingual Customer Service",
+  "profile_type": "bpo",
+  "cv": {
+    "contact": {
+      "name": "Santiago Hurtado Lopez",
+      "email": "Sanhurtadolopez@outlook.com",
+      "phone": "(+57) 3126714038",
+      "location": "Cali, Colombia",
+      "linkedin": "",
+      "website": "",
+      "github": ""
+    },
+    "headline": "Bilingual Customer Service & Technical Support",
+    "summary": "Bilingual professional with over three years of experience in remote, technology-driven environments, coordinating teams, resolving complex issues, and delivering solutions for clients. Native Spanish speaker with upper-intermediate English (B2+), strong digital fluency, and a proven ability to communicate clearly, learn new platforms quickly, and follow issues through resolution.",
+    "experience": [
+      {
+        "company": "Bit Colombia",
+        "title": "Technical Lead / Full-Stack Developer",
+        "dates": "Aug 2023 - Jan 2026",
+        "location": "Remote",
+        "description": "• Coordinated a multidisciplinary remote team, translating client and business requirements into clear priorities and follow-up actions.\n• Delivered and maintained production solutions for clients, investigating issues, communicating progress, and following technical problems through resolution.\n• Managed simultaneous projects and deadlines while maintaining consistent delivery standards.\n• Improved production-system performance by 10x through structured troubleshooting and continuous optimization.",
+        "technologies": []
+      },
+      {
+        "company": "Grupo Vidawa",
+        "title": "Frontend Developer",
+        "dates": "May 2022 - Oct 2022",
+        "location": "Remote",
+        "description": "• Collaborated with external teams to clarify requirements and deliver reliable administrative tools for business users.\n• Diagnosed interface and integration issues, shared findings, and coordinated fixes across teams.\n• Built clear, user-focused interfaces for enterprise administrative processes.",
+        "technologies": []
+      },
+      {
+        "company": "FianzaCredito",
+        "title": "Full-Stack Developer",
+        "dates": "Nov 2021 - Apr 2022",
+        "location": "Remote",
+        "description": "• Integrated external service providers for credit-evaluation workflows and coordinated technical issue resolution.\n• Maintained business-critical applications handling sensitive financial information with accuracy and attention to data privacy.\n• Investigated production problems, communicated technical findings, and implemented reliable fixes.",
+        "technologies": []
+      }
+    ],
+    "education": [
+      {
+        "institution": "SENA",
+        "degree": "Software Programming Technician (Técnico en Programación de Software)",
+        "dates": "Sep 2017 - Jan 2020",
+        "details": ""
+      }
+    ],
+    "projects": [],
+    "skills": [
+      "Bilingual Communication",
+      "Customer-Oriented Communication",
+      "Technical Troubleshooting",
+      "Problem Resolution",
+      "Active Listening",
+      "Clear Written Communication",
+      "Remote Collaboration",
+      "Team Coordination",
+      "Issue Documentation",
+      "Attention to Detail",
+      "Time Management",
+      "Adaptability",
+      "Fast Learning",
+      "Digital Fluency",
+      "Data Privacy Awareness"
+    ],
+    "skill_categories": [
+      {
+        "name": "Customer Communication",
+        "skills": [
+          "Bilingual Communication",
+          "Customer-Oriented Communication",
+          "Active Listening",
+          "Clear Written Communication"
+        ]
+      },
+      {
+        "name": "Support & Problem Solving",
+        "skills": [
+          "Technical Troubleshooting",
+          "Problem Resolution",
+          "Issue Documentation",
+          "Attention to Detail"
+        ]
+      },
+      {
+        "name": "Work Style",
+        "skills": [
+          "Remote Collaboration",
+          "Team Coordination",
+          "Time Management",
+          "Adaptability",
+          "Fast Learning",
+          "Digital Fluency",
+          "Data Privacy Awareness"
+        ]
+      }
+    ],
+    "certifications": [],
+    "languages": [
+      "Spanish (Native)",
+      "English (Upper-Intermediate, B2+)"
+    ],
+    "raw_markdown": "",
+    "detected_language": "en"
+  },
+  "experience_context": {
+    "Bit Colombia": {
+      "real_technologies": [
+        "Remote collaboration tools",
+        "Business administration platforms",
+        "Issue diagnosis",
+        "Technical documentation"
+      ],
+      "real_achievements": [
+        "Coordinated a multidisciplinary team including designers, database specialists, and infrastructure specialists",
+        "Delivered production websites and business platforms for clients",
+        "Managed requirements and delivery across multiple client projects",
+        "Investigated production issues and followed fixes through deployment",
+        "Improved system performance by 10x",
+        "Maintained business platforms containing payroll, attendance, budgeting, booking, and reporting workflows"
+      ]
+    },
+    "Grupo Vidawa": {
+      "real_technologies": [
+        "Remote collaboration tools",
+        "Administrative interfaces",
+        "Issue diagnosis",
+        "Automated testing"
+      ],
+      "real_achievements": [
+        "Coordinated with external teams building enterprise applications",
+        "Created user-focused interfaces for administrative panels",
+        "Diagnosed integration and interface issues",
+        "Documented and verified software changes"
+      ]
+    },
+    "FianzaCredito": {
+      "real_technologies": [
+        "Credit evaluation systems",
+        "External provider integrations",
+        "Production troubleshooting",
+        "Sensitive financial data"
+      ],
+      "real_achievements": [
+        "Integrated external credit-scoring providers",
+        "Maintained critical business applications",
+        "Handled systems processing sensitive financial information",
+        "Investigated production issues and implemented fixes"
+      ]
+    }
+  }
+}

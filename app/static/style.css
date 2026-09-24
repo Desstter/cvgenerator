@@ -288,6 +288,54 @@ select {
 
 .base-cv-btn:hover { background: var(--primary-light); }
 
+.opportunity-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.opportunity-heading p {
+  color: var(--text-muted);
+  margin-top: 3px;
+  font-size: .9rem;
+}
+
+.verified-badge {
+  flex: 0 0 auto;
+  color: #146c43;
+  background: #e8f6ee;
+  border: 1px solid #b8dfc8;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.opportunity-card select { width: 100%; }
+
+.opportunity-meta {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--primary);
+  background: #f3f6fa;
+  border-top: 1px solid #dce4ec;
+  border-right: 1px solid #dce4ec;
+  border-bottom: 1px solid #dce4ec;
+  border-radius: 0 6px 6px 0;
+  color: #44515d;
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+.opportunity-meta a {
+  display: inline-block;
+  margin-top: 5px;
+  color: var(--accent);
+  font-weight: 650;
+}
+
 /* Checkbox option group alignment */
 .option-group--checkbox {
   display: flex;
@@ -804,6 +852,45 @@ select {
   bottom: 0;
   background: var(--card);
   padding-top: 8px;
+}
+
+.claim-review,
+.content-review {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafcff;
+}
+
+.claim-pass {
+  color: var(--success);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.claim-blocked {
+  color: var(--danger);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.claim-note {
+  margin: 4px 0;
+  color: var(--text-secondary);
+}
+
+.content-review summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+#content-review-content h4 {
+  margin: 12px 0 4px;
+}
+
+#content-review-content ul {
+  padding-left: 20px;
 }
 
 @media (max-width: 600px) {

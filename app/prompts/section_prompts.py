@@ -1,15 +1,33 @@
-def combined_analyze_adapt_prompt(cv_json: str, job_text: str, real_context: str = "") -> str:
+def combined_analyze_adapt_prompt(
+    cv_json: str,
+    job_text: str,
+    real_context: str = "",
+    profile_type: str = "developer",
+) -> str:
     context_block = ""
     if real_context:
         context_block = f"""
-REAL CONTEXT (for intelligent technology substitutions):
+REAL CONTEXT (verified evidence only):
 {real_context}
 
-TIERED SUBSTITUTION (goal: embellish believably, NOT chase keywords):
-- TIER 1 (adjacent/transferable, e.g. React↔Vue, Node↔Django): reframe real work as the job's tech, keep achievements/metrics intact.
-- TIER 2 (foreign tech with no real basis, e.g. Ruby on Rails when never used): DO NOT claim it, DO NOT build the CV around "looking to apply X". Surface a genuine adjacency at most, never name it as owned experience.
-- ADDITIVE, NOT SUBTRACTIVE: if the candidate has both a real differentiator and the job's tech (e.g. OCI + AWS), keep BOTH and reorder — never delete a real skill to insert the job's keyword.
+EVIDENCE POLICY:
+- Never substitute one technology for another, even when they are adjacent.
+- Use only technologies, metrics and achievements present in the CV or this context.
+- Keep the original skill inventory; relevance comes from ordering and truthful bullets.
 TONE: assert ("I built/led"), never aspire ("looking to/eager to"). Every claim must survive an interview.
+"""
+
+    profile_rules = ""
+    if profile_type == "bpo":
+        profile_rules = """
+BPO PROFILE OVERRIDES (higher priority than generic adaptation rules):
+- Output the adapted CV in ENGLISH regardless of the job-description language.
+- Preserve every original employment title exactly. Do not turn development roles into support roles.
+- The summary may say "over three years of professional experience" but must NEVER imply years of customer-service/BPO experience.
+- Only reorder or retain skills already present in the input CV. Do not introduce CRM, telephony, sales, billing, refund, retention, collections, or support-platform experience.
+- Set every experience "technologies" list to the same value received in the input.
+- Optimize for one page: summary <= 2 sentences; newest role <= 4 bullets; older roles <= 3 bullets; concise bullets.
+- Emphasize verified transferable experience and leave unsupported job keywords out.
 """
 
     return f"""Perform two tasks in a single response:
@@ -42,22 +60,22 @@ KEYWORD EQUIVALENCES (semantic enrichment for ATS scoring):
   map "Python" to "JavaScript"). When in doubt, leave it out — an empty list is valid.
 
 CV ADAPTATION RULES:
-- NEVER change: company names, dates, education, contact info
+- NEVER change: company names, job titles, dates, education, contact info, per-role technologies, or the skill inventory
 - SUMMARY ALIGNMENT: the summary's first sentence must present the candidate as the job's
   target role (use the job title's role wording naturally) + years + core stack.
 - REWRITE: summary and experience descriptions following the BULLET QUALITY RULES and
   LENGTH AND STRUCTURE RULES from your instructions (formula, forbidden openers, quantification,
   bullet counts per role). These rules are the core of the task — a technically correct but
   generic rewrite is a failure.
-- ADAPT: job titles per company to match the target role — realistic role names only, NEVER tag the job's buzzword onto the title (FORBIDDEN: "Frontend Engineer (AI-Assisted)")
-- REORDER: skills list with most relevant first
+- PRESERVE: every original job title and technology list exactly
+- REORDER: verified skills with most relevant first; do not add or remove skills
 - CATEGORIZE: group the skills into 3-5 named categories in "skill_categories" (e.g. Languages,
   Frameworks, Cloud & Infrastructure, Databases & Tools). Category names in the job's language.
   Every skill in "skills" must appear in exactly one category.
-- SUBSTITUTE: technologies to match job requirements (see real context)
 - LANGUAGE: Write the entire adapted CV in the SAME language as the job description
 - ANTI-STUFFING: never reuse the same job-description phrase across more than one bullet; do not prepend the job's headline term to every bullet ("AI-driven X, AI-driven Y..."); one truthful, in-context mention of a keyword scores the same with an ATS as five — prefer it. If a keyword can't be placed truthfully, leave it out.
 {context_block}
+{profile_rules}
 DATA TYPE REQUIREMENTS (critical):
 - All "description" fields must be STRINGS with newline-separated bullets, NOT arrays
 - "summary" must be a STRING, NOT an array
@@ -74,11 +92,26 @@ Job Description:
 {job_text}"""
 
 
-def refine_cv_prompt(adapted_cv_json: str, job_title: str, job_skills: list[str], language: str) -> str:
+def refine_cv_prompt(
+    adapted_cv_json: str,
+    job_title: str,
+    job_skills: list[str],
+    language: str,
+    profile_type: str = "developer",
+) -> str:
     """Second-pass critique: review the adapted CV as a senior recruiter and fix the weakest parts."""
     lang_note = "The CV must stay in Spanish." if language == "es" else "The CV must stay in English."
     skills_str = ", ".join(job_skills[:15])
-    return f"""You are now acting as a SENIOR TECHNICAL RECRUITER reviewing this CV for a
+    if profile_type == "bpo":
+        lang_note = "The CV must stay in English. The candidate has no direct call-center/BPO employment."
+    bpo_guard = ""
+    if profile_type == "bpo":
+        bpo_guard = """
+7. CAREER-CHANGE GUARD: preserve the exact job titles and never add direct BPO/call-center,
+   CRM, telephony, sales, billing, refund, retention, ticket-volume, CSAT, AHT, or FCR claims.
+   Keep the summary to two sentences and the full resume concise enough for one page.
+"""
+    return f"""You are now acting as a SENIOR RECRUITER reviewing this CV for a
 "{job_title}" opening (key requirements: {skills_str}). You have 30 seconds per CV and you have
 seen thousands. Be ruthless.
 
@@ -97,6 +130,7 @@ REVIEW PASS — find and FIX these problems:
 5. SUMMARY: if it exceeds 3 sentences or contains filler ("passionate", "results-driven",
    "motivated"), tighten it. First sentence = role + years + core stack.
 6. BURIED LEDE: within each role, the bullet most relevant to "{job_title}" must come first.
+{bpo_guard}
 
 {lang_note}
 Keep everything that is already strong — do not rewrite for the sake of rewriting.
@@ -142,31 +176,25 @@ def full_cv_adaptation_prompt(cv_json: str, job_json: str, real_context: str = "
     context_block = ""
     if real_context:
         context_block = f"""
-REAL CONTEXT (use this to make intelligent, TIERED technology substitutions):
+REAL CONTEXT (verified evidence only):
 {real_context}
 
-TIER 1 — ADJACENT/TRANSFERABLE (React↔Vue, Node↔Django): reframe the real work as the job's tech,
-keep the real achievements/scope/metrics intact. e.g. Vue.js at Grupo Vidawa → describe as React.
-TIER 2 — FOREIGN tech with no real basis (e.g. Ruby on Rails, never used): DO NOT claim it and DO NOT
-build the summary/bullets around "looking to apply X". Surface a genuine adjacency at most, never as owned experience.
-ADDITIVE, NOT SUBTRACTIVE: if the candidate has both a real differentiator and the job's tech (e.g. OCI + AWS),
-keep BOTH and just reorder (job's tech first) — never delete a real skill to insert the job's keyword.
+Never substitute one technology for another. Use only verified technologies, achievements and metrics.
+Keep the skill inventory and per-role technology lists unchanged; reorder verified skills for relevance.
 TONE: assert ("built/led"), never aspire ("looking to/eager to"). Every claim must survive an interview.
 """
 
     return f"""Adapt the following CV to better match the job description.
 
 IMPORTANT RULES:
-- NEVER change: company names, dates, education institutions, degree names, contact info
-- YOU CAN change: job titles per company to better match the target role
+- NEVER change: company names, job titles, dates, education institutions, degree names, contact info, skill inventory or technology lists
 - REWRITE: summary, experience descriptions, project descriptions to highlight relevant skills
 - REORDER: skills list so matching skills come first
-- SUBSTITUTE: technologies to match job requirements (see real context below)
 - LANGUAGE: Output the CV in the SAME language as the job description
 - Start bullet points with action verbs
 - Integrate the job's keywords naturally into real accomplishments — never as decoration
 - ANTI-STUFFING: never reuse the same phrase across more than one bullet; do not prepend the job's headline term to every bullet; one truthful mention scores the same with an ATS as five. If a keyword can't be placed truthfully, leave it out.
-- ADAPT job titles to realistic role names only — never tag the job's buzzword onto the title
+- Preserve original job titles exactly
 - Quantify achievements where possible
 {context_block}
 Return ONLY valid JSON with the same structure as the input CV.
@@ -207,15 +235,14 @@ def experience_prompt(experience_json: str, job_keywords: list[str], language: s
 {lang_note}
 RULES:
 - NEVER change: company, dates, location
-- You CAN change the job title to better match the target role
+- Preserve the original job title and technology list exactly
 - Rewrite description bullets using action verbs and relevant keywords
 - Quantify achievements where the original implies measurable results
 - Keep the same number of bullets (or fewer)
-- TIERED tech substitution: reframe only adjacent/transferable tech (React↔Vue, Node↔Django); do NOT claim foreign tech with no real basis, and do NOT frame bullets as "looking to apply X"
-- ADDITIVE, not subtractive: keep the candidate's real differentiator techs, just reorder the job's tech first — never delete a real skill
+- Never substitute technologies or add skills that are not present in verified evidence
 - TONE: assert what was done, never aspire
 
 Experience entry:
 {experience_json}
 
-Return ONLY valid JSON with the same structure, only title, description and technologies fields changed."""
+Return ONLY valid JSON with the same structure; only the description may change."""

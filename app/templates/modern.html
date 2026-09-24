@@ -96,6 +96,7 @@
 </head>
 <body>
   <h1>{{ cv.contact.name }}</h1>
+  {% if cv.headline %}<div class="headline">{{ cv.headline }}</div>{% endif %}
   <div class="contact-info">
     {% if cv.contact.email %}<a href="mailto:{{ cv.contact.email }}">{{ cv.contact.email }}</a>{% endif %}
     {% if cv.contact.phone %}<span class="sep">&middot;</span>{{ cv.contact.phone }}{% endif %}

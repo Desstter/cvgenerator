@@ -54,7 +54,19 @@ _LANG_TO_ES = {
     "intermediate": "Intermedio", "basic": "Básico", "professional": "Profesional",
 }
 
+_DEGREE_TO_EN = {
+    "técnico en programación de software": "Software Programming Technician (Técnico en Programación de Software)",
+    "tecnico en programacion de software": "Software Programming Technician (Técnico en Programación de Software)",
+}
+
+ALLOWED_TEMPLATES = {"modern", "classic", "technical", "bilingual"}
+
 _WORD_RE = re.compile(r"[A-Za-zÁÉÍÓÚáéíóúñÑ]+")
+_DASH_RE = re.compile(r"[‐‑‒–—―]")
+
+
+def _ascii_dashes(text: str) -> str:
+    return _DASH_RE.sub("-", text) if text else text
 
 
 def _translate_tokens(text: str, mapping: dict[str, str]) -> str:
@@ -81,7 +93,32 @@ def _localize_cv(cv: CVData) -> CVData:
         exp.location = _translate_tokens(exp.location, location)
     for edu in out.education:
         edu.dates = _translate_tokens(edu.dates, months)
+        if lang == "en":
+            edu.degree = _DEGREE_TO_EN.get(edu.degree.casefold(), edu.degree)
     out.languages = [_translate_tokens(l, langmap) for l in out.languages]
+
+    out.headline = _ascii_dashes(out.headline)
+    out.summary = _ascii_dashes(out.summary)
+    out.skills = [_ascii_dashes(value) for value in out.skills]
+    out.certifications = [_ascii_dashes(value) for value in out.certifications]
+    out.languages = [_ascii_dashes(value) for value in out.languages]
+    for category in out.skill_categories:
+        category.name = _ascii_dashes(category.name)
+        category.skills = [_ascii_dashes(value) for value in category.skills]
+    for exp in out.experience:
+        exp.title = _ascii_dashes(exp.title)
+        exp.dates = _ascii_dashes(exp.dates)
+        exp.location = _ascii_dashes(exp.location)
+        exp.description = _ascii_dashes(exp.description)
+        exp.technologies = [_ascii_dashes(value) for value in exp.technologies]
+    for edu in out.education:
+        edu.degree = _ascii_dashes(edu.degree)
+        edu.dates = _ascii_dashes(edu.dates)
+        edu.details = _ascii_dashes(edu.details)
+    for project in out.projects:
+        project.name = _ascii_dashes(project.name)
+        project.description = _ascii_dashes(project.description)
+        project.technologies = [_ascii_dashes(value) for value in project.technologies]
     return out
 
 
@@ -101,8 +138,8 @@ def _build_filename(cv: CVData, job_title: str = "") -> str:
     title_slug = _slugify(job_title)
     if title_slug:
         parts.append(title_slug)
-    if len(parts) == 1:
-        parts.append(uuid.uuid4().hex[:8])
+    # Each generation must keep its own file; history points to this filename.
+    parts.append(uuid.uuid4().hex[:8])
     return "_".join(parts) + ".pdf"
 
 
@@ -166,8 +203,11 @@ def generate_pdf_from_template(
     matched_keywords: list[str] | None = None,
     template_name: str = "modern",
     job_title: str = "",
+    max_pages: int | None = None,
 ) -> Path:
     """Generate a PDF from an HTML template."""
+    if template_name not in ALLOWED_TEMPLATES:
+        raise ValueError(f"Unknown PDF template: {template_name}")
     cv = _localize_cv(cv)
     env = Environment(loader=FileSystemLoader(str(settings.templates_dir)))
     template = env.get_template(f"{template_name}.html")
@@ -182,6 +222,15 @@ def generate_pdf_from_template(
 
     output_path = settings.outputs_dir / _build_filename(cv, job_title)
     _render_pdf(html_content, output_path)
+    if max_pages is not None:
+        with fitz.open(str(output_path)) as document:
+            page_count = document.page_count
+        if page_count > max_pages:
+            output_path.unlink(missing_ok=True)
+            raise ValueError(
+                f"Generated PDF has {page_count} pages; this profile requires at most {max_pages}. "
+                "Shorten the generated content and try again."
+            )
     return output_path
 
 

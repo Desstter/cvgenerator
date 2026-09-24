@@ -11,14 +11,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.config import settings
-from app.models.schemas import CVData, AdaptationResult, BaseCVStore
+from app.models.schemas import CVData, AdaptationResult, BaseCVStore, ClaimReview
 from app.services.pdf_parser import extract_as_markdown
 from app.services.cv_analyzer import analyze_cv_rule_based, is_parse_sufficient, validate_cv_data
 from app.services.ai_adapter import get_provider, parse_cv_with_ai, analyze_and_adapt, refine_cv
 from app.services.history import load_history, save_application, delete_application
-from app.services.base_cv_store import load_base_cv, save_base_cv, build_real_context
+from app.services.base_cv_store import (
+    load_base_cv,
+    save_base_cv,
+    build_real_context,
+    get_profile_definition,
+    list_profile_definitions,
+)
 from app.services.ats_optimizer import analyze_keyword_match, reorder_skills
 from app.services.pdf_generator import generate_pdf_from_template, generate_pdf_inplace
+from app.services.claim_guard import sanitize_adaptation, review_claims
+from app.services.opportunity_store import list_opportunities
 from app.services.event_log import log_event, get_events, clear_events, install_logging_bridge, Timer
 
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +41,14 @@ def _error_detail(e: Exception, context: str) -> dict:
     log_event(context, f"{type(e).__name__}: {e}", level="error", detail=tb)
     return {"message": f"{type(e).__name__}: {e}", "traceback": tb}
 
-app = FastAPI(title="CV Generator", version="2.1.0")
+
+def _profile_or_400(profile_id: str):
+    try:
+        return get_profile_definition(profile_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+app = FastAPI(title="CV Generator", version="4.0.0")
 
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -117,6 +132,7 @@ def adapt_cv_endpoint(
     file: Optional[UploadFile] = File(None),
     template: str = Form("modern"),
     provider_name: str = Form(""),
+    profile_id: str = Form("developer"),
 ):
     """Adapt CV to job description. PDF upload is optional — uses base CV if not provided.
 
@@ -129,12 +145,15 @@ def adapt_cv_endpoint(
     started = time.perf_counter()
     log_event(
         "pipeline",
-        f"━━ New adaptation request (template={template}, "
+        f"━━ New adaptation request (profile={profile_id}, template={template}, "
         f"provider={provider_name or settings.ai_provider}, "
         f"job description: {len(job_description):,} chars) ━━",
     )
 
     try:
+        profile = _profile_or_400(profile_id)
+        profile_type = profile.profile_type
+        store = load_base_cv(profile_id)
         if file and file.filename:
             # Custom PDF uploaded — use old flow
             if not file.filename.lower().endswith(".pdf"):
@@ -159,8 +178,7 @@ def adapt_cv_endpoint(
             validate_cv_data(cv)
         else:
             # No PDF — use the editable base CV
-            logger.info("Using base CV (no PDF uploaded)")
-            store = load_base_cv()
+            logger.info("Using %s base CV (no PDF uploaded)", profile_id)
             cv = store.cv
             real_context = build_real_context(store)
             provider = get_provider(provider_name or None)
@@ -168,7 +186,11 @@ def adapt_cv_endpoint(
         # Analyze job and adapt CV in a single API call
         with Timer("ai", "Analyzing job & adapting CV (AI pass 1/2)"):
             job, adapted_cv, equivalences = analyze_and_adapt(
-                provider, cv, job_description, real_context=real_context
+                provider,
+                cv,
+                job_description,
+                real_context=real_context,
+                profile_type=profile_type,
             )
         log_event(
             "ai",
@@ -181,25 +203,41 @@ def adapt_cv_endpoint(
         # Second pass: recruiter-style critique that rewrites weak bullets/summary
         if settings.refine_pass:
             with Timer("ai", "Recruiter critique & rewrite (AI pass 2/2)"):
-                adapted_cv = refine_cv(provider, adapted_cv, job)
+                adapted_cv = refine_cv(provider, adapted_cv, job, profile_type=profile_type)
         else:
             log_event("ai", "Refine pass disabled in config — skipping AI pass 2/2")
 
-        # Detect technology substitutions
+        adapted_cv = sanitize_adaptation(cv, adapted_cv, profile_type=profile_type)
+        claim_review = review_claims(cv, adapted_cv, real_context, profile_type=profile_type)
+        if claim_review.status != "passed":
+            raise ValueError(
+                "Truth review blocked the generated CV: "
+                + "; ".join(claim_review.unsupported_claims)
+            )
+        log_event(
+            "claims",
+            "Truth review passed — protected fields and verified skills preserved",
+            level="success",
+        )
+
+        # Technology substitution is intentionally disabled. Relevance comes from
+        # ordering and evidence, not relabelling one stack as another.
         tech_swaps = []
-        for orig_exp, new_exp in zip(cv.experience, adapted_cv.experience):
-            orig_set = {t.lower() for t in orig_exp.technologies}
-            new_set = {t.lower() for t in new_exp.technologies}
-            removed = [t for t in orig_exp.technologies if t.lower() not in new_set]
-            added = [t for t in new_exp.technologies if t.lower() not in orig_set]
-            for old_t, new_t in zip(removed, added):
-                tech_swaps.append(f"{old_t} → {new_t}")
 
         # ATS optimization — score BEFORE adaptation (baseline) and AFTER (final)
         all_job_keywords = job.required_skills + job.preferred_skills + job.keywords
-        original_ats_score = analyze_keyword_match(cv, job, extra_synonyms=equivalences)
-        adapted_cv.skills = reorder_skills(adapted_cv.skills, all_job_keywords, extra_synonyms=equivalences)
-        ats_score = analyze_keyword_match(adapted_cv, job, extra_synonyms=equivalences)
+        original_ats_score = analyze_keyword_match(
+            cv, job, extra_synonyms=equivalences, profile_type=profile_type
+        )
+        adapted_cv.skills = reorder_skills(
+            adapted_cv.skills,
+            all_job_keywords,
+            extra_synonyms=equivalences,
+            profile_type=profile_type,
+        )
+        ats_score = analyze_keyword_match(
+            adapted_cv, job, extra_synonyms=equivalences, profile_type=profile_type
+        )
         log_event(
             "ats",
             f"ATS score: {original_ats_score.overall_score:.0f}% → {ats_score.overall_score:.0f}% "
@@ -218,6 +256,10 @@ def adapt_cv_endpoint(
             "detected_language": job.detected_language,
         }
 
+        # BPO output is deliberately locked to the verified one-page template.
+        if profile.one_page_required:
+            template = profile.default_template
+
         # Generate PDF
         with Timer("pdf", f"Generating PDF (template={template})"):
             if template == "original" and pdf_path:
@@ -228,6 +270,7 @@ def adapt_cv_endpoint(
                     matched_keywords=ats_score.matched_keywords,
                     template_name=template,
                     job_title=job.title,
+                    max_pages=profile.max_pages,
                 )
 
         # Persist PDF to saved/ so it survives the 1-hour outputs/ cleanup
@@ -243,6 +286,7 @@ def adapt_cv_endpoint(
             preferred_score=ats_score.preferred_score,
             pdf_filename=output_path.name,
             detected_language=job.detected_language,
+            profile_id=profile_id,
         )
 
         result = AdaptationResult(
@@ -253,6 +297,8 @@ def adapt_cv_endpoint(
             pdf_filename=output_path.name,
             tech_swaps=tech_swaps,
             job_analysis=job_analysis,
+            profile_id=profile_id,
+            claim_review=claim_review,
         )
 
         log_event(
@@ -279,11 +325,33 @@ def adapt_cv_endpoint(
             pdf_path.unlink(missing_ok=True)
 
 
+@app.get("/api/profiles")
+async def get_profiles():
+    return [profile.model_dump() for profile in list_profile_definitions()]
+
+
+@app.get("/api/opportunities")
+async def get_opportunities(profile: str = ""):
+    """Return the curated real-job catalog, optionally filtered by CV profile."""
+    if profile:
+        _profile_or_400(profile)
+    return [item.model_dump() for item in list_opportunities(profile or None)]
+
+
 @app.get("/api/base-cv")
-def base_cv_pdf(template: str = "modern"):
+def base_cv_pdf(profile: str = "developer", template: str = ""):
     """Generate and download the base CV with real technologies, no adaptation."""
-    cv = load_base_cv().cv
-    output_path = generate_pdf_from_template(cv, matched_keywords=[], template_name=template)
+    definition = _profile_or_400(profile)
+    cv = load_base_cv(profile).cv
+    selected_template = definition.default_template if definition.one_page_required else (template or definition.default_template)
+    title = "Bilingual_Customer_Service" if definition.profile_type == "bpo" else ""
+    output_path = generate_pdf_from_template(
+        cv,
+        matched_keywords=[],
+        template_name=selected_template,
+        job_title=title,
+        max_pages=1 if definition.one_page_required else None,
+    )
     return FileResponse(
         str(output_path),
         media_type="application/pdf",
@@ -292,15 +360,20 @@ def base_cv_pdf(template: str = "modern"):
 
 
 @app.get("/api/base-cv-data")
-async def get_base_cv_data():
+async def get_base_cv_data(profile: str = "developer"):
     """Return the editable base CV store (CV data + hidden real context)."""
-    return load_base_cv().model_dump(exclude={"cv": {"raw_markdown"}})
+    _profile_or_400(profile)
+    return load_base_cv(profile).model_dump(exclude={"cv": {"raw_markdown"}})
 
 
 @app.put("/api/base-cv-data")
-async def update_base_cv_data(store: BaseCVStore):
+async def update_base_cv_data(store: BaseCVStore, profile: str = "developer"):
     """Persist edits to the base CV store."""
-    saved = save_base_cv(store)
+    _profile_or_400(profile)
+    try:
+        saved = save_base_cv(store, profile)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     return saved.model_dump(exclude={"cv": {"raw_markdown"}})
 
 

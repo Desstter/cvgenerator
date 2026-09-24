@@ -35,6 +35,24 @@
       <div id="cv-editor" class="cv-editor" style="display:none;"></div>
     </div>
 
+    <!-- Curated real opportunities -->
+    <div class="card opportunity-card">
+      <div class="opportunity-heading">
+        <div>
+          <h2>Real Job Examples</h2>
+          <p>Verified LinkedIn snapshots you can load without copying the description manually.</p>
+        </div>
+        <span class="verified-badge">Source tracked</span>
+      </div>
+      <select id="opportunity-select">
+        <option value="">Choose a verified opportunity…</option>
+      </select>
+      <div class="opportunity-meta" id="opportunity-meta" style="display:none;">
+        <div id="opportunity-fit"></div>
+        <a id="opportunity-link" target="_blank" rel="noopener noreferrer">View original LinkedIn posting</a>
+      </div>
+    </div>
+
     <!-- Job Description (main input) -->
     <div class="card">
       <h2>Job Description</h2>
@@ -44,6 +62,13 @@
     <!-- Options -->
     <div class="card">
       <div class="options-row">
+        <div class="option-group">
+          <label>CV Profile</label>
+          <select id="profile-select">
+            <option value="developer">Developer</option>
+            <option value="bilingual_customer_service">Bilingual Customer Service</option>
+          </select>
+        </div>
         <div class="option-group">
           <label>AI Provider</label>
           <select id="provider-select">
@@ -56,8 +81,10 @@
         <div class="option-group">
           <label>Template</label>
           <select id="template-select">
+            <option value="technical">Technical One-Page</option>
             <option value="modern">Modern</option>
             <option value="classic">Classic</option>
+            <option value="bilingual">Bilingual One-Page</option>
           </select>
         </div>
         <div class="option-group option-group--checkbox">
@@ -175,6 +202,16 @@
       <details class="job-analysis">
         <summary>Job Analysis</summary>
         <div class="job-analysis-content" id="job-analysis-content"></div>
+      </details>
+
+      <div class="claim-review" id="claim-review-section" style="display:none;">
+        <h3>Truth & Claim Review</h3>
+        <div id="claim-review-content"></div>
+      </div>
+
+      <details class="content-review" id="content-review-section">
+        <summary>Review Generated Content Before Download</summary>
+        <div id="content-review-content"></div>
       </details>
 
       <div class="suggestions" id="suggestions-box" style="display:none;">

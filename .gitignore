@@ -1,7 +1,9 @@
 __pycache__/
 *.pyc
 .env
-.env.example
+app/data/history.json
+output/
+tmp/
 uploads/
 outputs/
 saved/

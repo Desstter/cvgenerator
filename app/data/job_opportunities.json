@@ -1,0 +1,58 @@
+[
+  {
+    "id": "taskus-cali-csr",
+    "profile_id": "bilingual_customer_service",
+    "title": "Customer Service Representative - Cali Sur",
+    "company": "TaskUs",
+    "location": "Cali, Valle del Cauca, Colombia",
+    "source_name": "LinkedIn",
+    "source_url": "https://co.linkedin.com/jobs/view/customer-service-representative-cali-sur-at-taskus-4303729954",
+    "checked_at": "2026-08-31",
+    "status": "active",
+    "detected_language": "en",
+    "fit_note": "Local entry-level opening. Strong transferability; direct call-center experience is not listed as required.",
+    "job_description": "TaskUs — Customer Service Representative - Cali Sur\nLocation: Cali, Valle del Cauca, Colombia. Entry level, full time.\n\nResponsibilities:\n- Receive inbound and/or place outbound calls.\n- Provide accurate and timely responses through email and live chat.\n- Manage and resolve customer complaints professionally according to client quality guidelines.\n- Protect customer satisfaction and the overall customer experience.\n\nRequirements:\n- Strong problem-solving and critical-thinking skills focused on issue resolution.\n- Exceptional verbal and written communication in English.\n- Willingness to work shifting schedules.\n- Ability to multitask with close attention to detail.\n- Readiness to participate in formal training and continuous self-improvement."
+  },
+  {
+    "id": "bush-cali-bilingual-csr",
+    "profile_id": "bilingual_customer_service",
+    "title": "Bilingual Customer Service Representative",
+    "company": "Bush & Bush Law Group",
+    "location": "Cali, Valle del Cauca, Colombia",
+    "source_name": "LinkedIn",
+    "source_url": "https://co.linkedin.com/jobs/view/bilingual-customer-service-representative-at-bush-and-bush-law-group-4437610408",
+    "checked_at": "2026-08-31",
+    "status": "active",
+    "detected_language": "en",
+    "fit_note": "Local role with transferable communication and documentation work. Fluent English and previous service experience are selection risks and must not be overstated.",
+    "job_description": "Bush & Bush Law Group — Bilingual Customer Service Representative\nLocation: Cali, Valle del Cauca, Colombia. Full time.\n\nResponsibilities:\n- Manage incoming calls, emails, and messages and respond accurately and on time.\n- Gather and document essential client information regarding legal cases.\n- Help clients navigate their cases by providing updates and process information.\n- Resolve concerns professionally and empathetically, escalating complex situations when needed.\n- Support data entry, scheduling, and organization of client files.\n\nQualifications:\n- Fluent English and Spanish.\n- High school diploma or equivalent; some college preferred.\n- Previous customer-service experience, preferably in a legal or office environment.\n- Strong verbal and written communication and a customer-centric approach.\n- Microsoft Office proficiency; case-management software is a plus.\n- Ability to multitask, prioritize, and manage time in a fast-paced environment.\n- Empathy, patience, and a positive attitude."
+  },
+  {
+    "id": "hired-python-developer",
+    "profile_id": "developer",
+    "title": "Python Developer",
+    "company": "Hired",
+    "location": "Colombia — Remote",
+    "source_name": "LinkedIn",
+    "source_url": "https://co.linkedin.com/jobs/view/python-developer-at-hired-4460897738",
+    "checked_at": "2026-08-31",
+    "status": "active",
+    "detected_language": "en",
+    "fit_note": "Strong match: production Python, Django, PostgreSQL, AWS, Docker, Git and CI/CD are verified. pytest and GraphQL remain unclaimed unless evidenced.",
+    "job_description": "Hired — Python Developer\nLocation: Colombia, fully remote. Full time, mid-level.\n\nKey responsibilities:\n- Build and maintain Python backend services, APIs, and data pipelines.\n- Write clean, well-tested code following modern Python practices.\n- Design and implement RESTful or GraphQL APIs.\n- Optimize performance and resource usage across services.\n- Collaborate with product, data, and infrastructure teams.\n- Contribute to code reviews and engineering documentation.\n\nRequired skills:\n- 2+ years building production Python applications.\n- Strong Django, Flask, or FastAPI knowledge.\n- PostgreSQL or a similar relational database.\n- Cloud services such as AWS or GCP and Docker containerization.\n- Git, CI/CD, and modern testing frameworks such as pytest.\n- Pragmatic decisions balancing speed and quality.\n\nAdditional qualities:\n- Strong written communication and ability to explain technical decisions.\n- Curiosity, test-and-learn mindset, and comfort working asynchronously across time zones."
+  },
+  {
+    "id": "seti-python-react",
+    "profile_id": "developer",
+    "title": "Desarrollador(a) Full Stack Python + React",
+    "company": "SETI S.A.S",
+    "location": "Colombia — Remoto",
+    "source_name": "LinkedIn",
+    "source_url": "https://co.linkedin.com/jobs/view/desarrollador-a-full-stack-python-%2B-react-colombia-at-seti-s-a-s-4443646162",
+    "checked_at": "2026-08-31",
+    "status": "active",
+    "detected_language": "es",
+    "fit_note": "Buen ajuste técnico. La formación solicitada es tecnólogo o profesional; el CV conserva el título técnico real para que el reclutador decida la equivalencia.",
+    "job_description": "SETI S.A.S — Desarrollador(a) Full Stack Python + React\nUbicación: Colombia. Modalidad remota. Contrato a término indefinido.\n\nRequisitos indispensables:\n- Tecnólogo o profesional en Ingeniería de Sistemas, Software o carreras afines.\n- Mínimo 3 años de experiencia en desarrollo de software.\n- Experiencia comprobable con Python usando FastAPI, Flask o Django.\n- Experiencia comprobable con React.\n- Desarrollo de aplicaciones web empresariales de mediana y alta complejidad.\n- Consumo e integración de APIs REST y metodologías ágiles.\n\nConocimientos técnicos:\n- React, JavaScript o TypeScript, HTML5 y CSS3; Angular deseable.\n- Python indispensable; Java/Spring Boot, .NET/C# o Node.js son valorados.\n- SQL Server, PostgreSQL y MySQL; MongoDB deseable.\n- AWS indispensable: EC2, RDS, S3, Lambda y API Gateway.\n- Git, Docker, CI/CD, SonarQube, pruebas unitarias y de integración."
+  }
+]

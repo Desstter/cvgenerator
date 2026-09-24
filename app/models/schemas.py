@@ -44,6 +44,7 @@ class SkillCategory(BaseModel):
 
 class CVData(BaseModel):
     contact: ContactInfo = Field(default_factory=ContactInfo)
+    headline: str = ""
     summary: str = ""
     experience: list[ExperienceEntry] = Field(default_factory=list)
     education: list[EducationEntry] = Field(default_factory=list)
@@ -57,15 +58,54 @@ class CVData(BaseModel):
 
 
 class ExperienceContextEntry(BaseModel):
-    """Real per-company context sent to the AI for tech-swapping, never shown in the final CV."""
+    """Verified per-company evidence sent to the AI, never shown verbatim in the final CV."""
     real_technologies: list[str] = Field(default_factory=list)
     real_achievements: list[str] = Field(default_factory=list)
 
 
 class BaseCVStore(BaseModel):
     """Editable base CV: the CV data plus the hidden real-context keyed by company name."""
+    profile_id: str = "developer"
+    display_name: str = "Developer"
+    profile_type: str = "developer"
     cv: CVData = Field(default_factory=CVData)
     experience_context: dict[str, ExperienceContextEntry] = Field(default_factory=dict)
+
+
+class ProfileDefinition(BaseModel):
+    id: str
+    display_name: str
+    description: str = ""
+    profile_type: str = "developer"
+    default_template: str = "modern"
+    content_language: str = "en"
+    one_page_required: bool = False
+    max_pages: int | None = None
+
+
+class JobOpportunity(BaseModel):
+    """A manually verified job snapshot that can be loaded into the generator."""
+    id: str
+    profile_id: str
+    title: str
+    company: str
+    location: str = ""
+    source_name: str = "LinkedIn"
+    source_url: str
+    checked_at: str
+    status: str = "active"
+    detected_language: str = "en"
+    fit_note: str = ""
+    job_description: str
+
+
+class ClaimReview(BaseModel):
+    status: str = "passed"
+    direct_bpo_experience_claimed: bool = False
+    unsupported_claims: list[str] = Field(default_factory=list)
+    protected_fields_preserved: bool = True
+    transferable_strengths: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class JobDescription(BaseModel):
@@ -97,3 +137,5 @@ class AdaptationResult(BaseModel):
     pdf_filename: str = ""
     tech_swaps: list[str] = Field(default_factory=list)
     job_analysis: dict = Field(default_factory=dict)
+    profile_id: str = "developer"
+    claim_review: ClaimReview = Field(default_factory=ClaimReview)

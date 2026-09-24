@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     refine_pass: bool = True
 
     base_dir: Path = Path(__file__).resolve().parent.parent
+    cv_data_dir: Path = base_dir / "app" / "data"
     uploads_dir: Path = base_dir / "uploads"
     outputs_dir: Path = base_dir / "outputs"
     saved_dir: Path = base_dir / "saved"
@@ -43,6 +44,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+settings.cv_data_dir.mkdir(parents=True, exist_ok=True)
 settings.uploads_dir.mkdir(exist_ok=True)
 settings.outputs_dir.mkdir(exist_ok=True)
 settings.saved_dir.mkdir(exist_ok=True)

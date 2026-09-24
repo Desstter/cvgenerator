@@ -1,8 +1,8 @@
 """
 Santiago Hurtado Lopez — Base CV data with real experience.
 
-Each experience entry has real_technologies/real_achievements context
-that is sent to AI for intelligent tech-swapping, but NOT shown in final CV.
+Each experience entry has verified technologies and achievements that are sent
+to AI for evidence-based rewriting, but are not printed verbatim.
 """
 
 from app.models.schemas import CVData, ContactInfo, ExperienceEntry, EducationEntry
@@ -68,12 +68,11 @@ def get_base_cv() -> CVData:
             github="github.com/Desstter",
         ),
         summary=(
-            "Desarrollador Full-Stack con 5 años de experiencia creando y manteniendo "
-            "sistemas escalables en entornos de producción. Experiencia sólida en arquitecturas "
-            "en la nube (OCI, AWS), integraciones con APIs REST y despliegues automatizados. "
-            "Apasionado por la inteligencia artificial aplicada a productos reales. "
-            "Reconocido por mi capacidad para optimizar rendimiento, liderar equipos técnicos "
-            "y trabajar en entornos 100% remotos y colaborativos."
+            "Desarrollador Full-Stack con 5 años de experiencia como desarrollador "
+            "construyendo y manteniendo sistemas en producción con Python/Django, Node.js, "
+            "React, Vue.js, PostgreSQL, Docker, OCI y AWS. He liderado entregas técnicas, "
+            "coordinado equipos multidisciplinarios y optimizado aplicaciones e "
+            "infraestructura para clientes en entornos remotos."
         ),
         experience=[
             ExperienceEntry(

@@ -65,6 +65,7 @@
 </head>
 <body>
   <h1>{{ cv.contact.name }}</h1>
+  {% if cv.headline %}<div style="text-align:center;font-size:10pt;color:#555;margin:2px 0 4px;">{{ cv.headline }}</div>{% endif %}
   <div class="contact-info">
     {% if cv.contact.email %}<a href="mailto:{{ cv.contact.email }}">{{ cv.contact.email }}</a>{% endif %}
     {% if cv.contact.phone %} | {{ cv.contact.phone }}{% endif %}

@@ -8,7 +8,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from app.config import settings
 from app.services.event_log import log_event
 from app.models.schemas import CVData, JobDescription, ExperienceEntry, ProjectEntry, SkillCategory
-from app.prompts.system_prompt import SYSTEM_PROMPT
+from app.prompts.system_prompt import SYSTEM_PROMPT, get_system_prompt
 from app.prompts.section_prompts import (
     job_analysis_prompt,
     full_cv_adaptation_prompt,
@@ -342,24 +342,24 @@ class GeminiProvider(AIProvider):
         "503", "500", "overload", "unavailable", "internal", "deadline", "timeout",
     )
 
-    def _make_model(self, model_name: str):
-        return self.genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
+    def _make_model(self, model_name: str, system: str):
+        return self.genai.GenerativeModel(model_name, system_instruction=system)
 
-    def _generate(self, model_name: str, prompt: str, generation_config: dict):
-        model = self._make_model(model_name)
+    def _generate(self, model_name: str, system: str, prompt: str, generation_config: dict):
+        model = self._make_model(model_name, system)
         return model.generate_content(
             prompt,
             generation_config=generation_config,
             request_options={"timeout": 120},
         )
 
-    def _run_with_fallback(self, prompt: str, generation_config: dict) -> str:
+    def _run_with_fallback(self, system: str, prompt: str, generation_config: dict) -> str:
         last_error = None
         for model_name in self._models:
             with _APICall("Gemini", model_name, len(prompt),
                           mode=generation_config.get("response_mime_type", "chat")) as call:
                 try:
-                    response = self._generate(model_name, prompt, generation_config)
+                    response = self._generate(model_name, system, prompt, generation_config)
                     text = response.text
                     call.done(len(text))
                     logger.info(f"Gemini response from: {model_name}")
@@ -386,24 +386,24 @@ class GeminiProvider(AIProvider):
         before_sleep=_log_before_sleep,
         reraise=True,
     )
-    def _run_with_retry(self, prompt: str, generation_config: dict) -> str:
-        return self._run_with_fallback(prompt, generation_config)
+    def _run_with_retry(self, system: str, prompt: str, generation_config: dict) -> str:
+        return self._run_with_fallback(system, prompt, generation_config)
 
     def chat(self, system: str, user: str) -> str:
-        prompt = user if system == SYSTEM_PROMPT else f"{system}\n\n{user}"
-        return self._run_with_retry(prompt, {"max_output_tokens": self.config.gemini_max_tokens})
+        return self._run_with_retry(
+            system, user, {"max_output_tokens": self.config.gemini_max_tokens}
+        )
 
     def chat_json(self, system: str, user: str, schema=None) -> dict:
         # NOTE: response_schema is intentionally NOT used. On gemini-2.5-flash-lite
         # (google-generativeai 0.8.4) it triggers degenerate output (repetition
         # loops or near-empty responses). response_mime_type + the explicit JSON
         # structure in the prompt produces complete, valid output instead.
-        prompt = user if system == SYSTEM_PROMPT else f"{system}\n\n{user}"
         config = {
             "max_output_tokens": self.config.gemini_max_tokens,
             "response_mime_type": "application/json",
         }
-        text = self._run_with_retry(prompt, config)
+        text = self._run_with_retry(system, user, config)
         return json.loads(_extract_json(text))
 
 
@@ -544,7 +544,11 @@ def _coerce_equivalences(raw) -> dict[str, list[str]]:
 
 
 def analyze_and_adapt(
-    provider: AIProvider, cv: CVData, job_text: str, real_context: str = ""
+    provider: AIProvider,
+    cv: CVData,
+    job_text: str,
+    real_context: str = "",
+    profile_type: str = "developer",
 ) -> tuple[JobDescription, CVData, dict[str, list[str]]]:
     """Single API call: analyze job description and adapt the CV simultaneously.
 
@@ -556,9 +560,10 @@ def analyze_and_adapt(
         json.dumps(cv_dict, ensure_ascii=False, indent=2),
         job_text,
         real_context=real_context,
+        profile_type=profile_type,
     )
 
-    data = provider.chat_json(SYSTEM_PROMPT, prompt, schema=ANALYZE_ADAPT_SCHEMA)
+    data = provider.chat_json(get_system_prompt(profile_type), prompt, schema=ANALYZE_ADAPT_SCHEMA)
     data = _clean_none_values(data)
     data = _strip_markdown(data)
 
@@ -585,7 +590,7 @@ def analyze_and_adapt(
     equivalences = _coerce_equivalences(data.get("keyword_equivalences"))
 
     cv_data = data.get("adapted_cv", {})
-    detected_lang = job.detected_language or cv.detected_language
+    detected_lang = "en" if profile_type == "bpo" else (job.detected_language or cv.detected_language)
 
     skill_categories = []
     for cat in cv_data.get("skill_categories", []):
@@ -597,6 +602,7 @@ def analyze_and_adapt(
 
     adapted = CVData(
         contact=cv.contact,
+        headline=cv.headline,
         summary=cv_data.get("summary", cv.summary),
         experience=[],
         education=cv.education,
@@ -614,11 +620,11 @@ def analyze_and_adapt(
             ae = adapted_experiences[i]
             adapted.experience.append(ExperienceEntry(
                 company=orig.company,
-                title=ae.get("title", orig.title),
+                title=orig.title,
                 dates=orig.dates,
                 location=orig.location,
                 description=ae.get("description", orig.description),
-                technologies=ae.get("technologies", orig.technologies),
+                technologies=orig.technologies,
             ))
         else:
             adapted.experience.append(orig)
@@ -639,7 +645,12 @@ def analyze_and_adapt(
     return job, adapted, equivalences
 
 
-def refine_cv(provider: AIProvider, adapted: CVData, job: JobDescription) -> CVData:
+def refine_cv(
+    provider: AIProvider,
+    adapted: CVData,
+    job: JobDescription,
+    profile_type: str = "developer",
+) -> CVData:
     """Second AI pass: critique the adapted CV as a senior recruiter and rewrite weak parts.
 
     Only summary and descriptions may change; structure, titles, and technologies are preserved.
@@ -654,8 +665,9 @@ def refine_cv(provider: AIProvider, adapted: CVData, job: JobDescription) -> CVD
             job_title=job.title or "the target role",
             job_skills=job.required_skills + job.preferred_skills,
             language=job.detected_language,
+            profile_type=profile_type,
         )
-        data = provider.chat_json(SYSTEM_PROMPT, prompt, schema=REFINE_SCHEMA)
+        data = provider.chat_json(get_system_prompt(profile_type), prompt, schema=REFINE_SCHEMA)
         data = _strip_markdown(_clean_none_values(data))
 
         refined = adapted.model_copy(deep=True)
@@ -732,6 +744,7 @@ def adapt_cv(provider: AIProvider, cv: CVData, job: JobDescription, real_context
     # Build adapted CV, preserving immutable fields from original
     adapted = CVData(
         contact=cv.contact,  # Never change contact info
+        headline=cv.headline,
         summary=data.get("summary", cv.summary),
         experience=[],
         education=cv.education,  # Never change education
