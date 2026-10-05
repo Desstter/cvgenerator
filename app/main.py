@@ -1,3 +1,7 @@
+import os
+# Disable runtime telemetry before importing PDF/ONNX dependencies.
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
+
 import shutil
 import time
 import traceback

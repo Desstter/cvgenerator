@@ -328,9 +328,14 @@ class OpenAIProvider(AIProvider):
 
 class GeminiProvider(AIProvider):
     def __init__(self):
-        import google.generativeai as genai
-        genai.configure(api_key=settings.google_api_key)
+        from google import genai
+        from google.genai import types
+
         self.genai = genai
+        self.client = genai.Client(
+            api_key=settings.google_api_key,
+            http_options=types.HttpOptions(timeout=120_000),
+        )
         self.config = settings
         # dict.fromkeys dedupes while preserving order (env primary may repeat a fallback)
         self._models = list(dict.fromkeys([settings.gemini_model] + settings.gemini_fallback_models))
@@ -342,15 +347,11 @@ class GeminiProvider(AIProvider):
         "503", "500", "overload", "unavailable", "internal", "deadline", "timeout",
     )
 
-    def _make_model(self, model_name: str, system: str):
-        return self.genai.GenerativeModel(model_name, system_instruction=system)
-
     def _generate(self, model_name: str, system: str, prompt: str, generation_config: dict):
-        model = self._make_model(model_name, system)
-        return model.generate_content(
-            prompt,
-            generation_config=generation_config,
-            request_options={"timeout": 120},
+        return self.client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config={**generation_config, "system_instruction": system},
         )
 
     def _run_with_fallback(self, system: str, prompt: str, generation_config: dict) -> str:
@@ -396,7 +397,7 @@ class GeminiProvider(AIProvider):
 
     def chat_json(self, system: str, user: str, schema=None) -> dict:
         # NOTE: response_schema is intentionally NOT used. On gemini-2.5-flash-lite
-        # (google-generativeai 0.8.4) it triggers degenerate output (repetition
+        # it triggers degenerate output (repetition
         # loops or near-empty responses). response_mime_type + the explicit JSON
         # structure in the prompt produces complete, valid output instead.
         config = {

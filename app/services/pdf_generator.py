@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unicodedata
 import uuid
-import fitz
+import pymupdf as fitz
 from io import BytesIO
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader

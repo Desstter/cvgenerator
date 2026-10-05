@@ -1,4 +1,4 @@
-import fitz
+import pymupdf as fitz
 import pymupdf4llm
 from pathlib import Path
 
