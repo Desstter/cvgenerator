@@ -1,0 +1,36 @@
+{
+  "profile_id": "developer",
+  "display_name": "Developer",
+  "profile_type": "developer",
+  "cv": {
+    "contact": {
+      "name": "Ana Example",
+      "email": "ana@example.com",
+      "phone": "",
+      "location": "Cali, Colombia",
+      "linkedin": "",
+      "website": "",
+      "github": ""
+    },
+    "headline": "Software Developer",
+    "summary": "Built Python APIs for an internal service.",
+    "experience": [
+      {
+        "company": "Example",
+        "title": "Developer",
+        "dates": "2022 - 2025",
+        "location": "Cali",
+        "description": "Built Python APIs for an internal service.",
+        "technologies": ["Python"]
+      }
+    ],
+    "education": [{"institution": "Example Institute", "degree": "Software Technology", "dates": "2021", "details": ""}],
+    "projects": [],
+    "skills": ["Python"],
+    "skill_categories": [],
+    "certifications": [],
+    "languages": ["Spanish Native"],
+    "detected_language": "en"
+  },
+  "experience_context": {}
+}

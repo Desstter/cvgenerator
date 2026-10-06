@@ -79,9 +79,13 @@ def test_fuzzy_llm_equivalence_used():
     assert _fuzzy_match("k8s", "deep kubernetes background", extra) is True
 
 
-def test_fuzzy_word_typo_fuzzy_fallback():
-    # SequenceMatcher path for >3-char tokens
-    assert _fuzzy_match("Postgres", "postgrs database admin") is True
+def test_typo_is_not_counted_as_verified_coverage():
+    assert _fuzzy_match("Postgres", "postgrs database admin") is False
+
+
+def test_partial_words_are_not_counted_as_skills():
+    assert _fuzzy_match("Go", "google cloud developer") is False
+    assert _fuzzy_match("React", "reactivity") is False
 
 
 def test_fuzzy_short_tokens_dont_trigger_fuzzy():

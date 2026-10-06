@@ -45,15 +45,6 @@ ANALYZE_ADAPT_SCHEMA = {
             "required": ["title", "company", "required_skills", "preferred_skills",
                          "keywords", "responsibilities", "detected_language"],
         },
-        "keyword_equivalences": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {"term": {"type": "string"}, "equivalents": _str_list()},
-                "required": ["term", "equivalents"],
-            },
-        },
         "adapted_cv": {
             "type": "object",
             "additionalProperties": False,
@@ -98,7 +89,7 @@ ANALYZE_ADAPT_SCHEMA = {
             "required": ["summary", "skills", "skill_categories", "experience", "projects"],
         },
     },
-    "required": ["job_analysis", "keyword_equivalences", "adapted_cv"],
+    "required": ["job_analysis", "adapted_cv"],
 }
 
 REFINE_SCHEMA = {
@@ -362,6 +353,7 @@ class GeminiProvider(AIProvider):
                 try:
                     response = self._generate(model_name, system, prompt, generation_config)
                     text = response.text
+                    self.model = model_name
                     call.done(len(text))
                     logger.info(f"Gemini response from: {model_name}")
                     return text
@@ -515,46 +507,16 @@ def _clean_none_values(obj):
     return obj
 
 
-def _coerce_equivalences(raw) -> dict[str, list[str]]:
-    """Validate the LLM's keyword_equivalences. Drop anything malformed instead of raising.
-
-    Accepts both the list-of-objects format ([{"term": ..., "equivalents": [...]}]) and the
-    legacy dict format ({"term": [...]}).
-    """
-    if isinstance(raw, list):
-        converted = {}
-        for item in raw:
-            if isinstance(item, dict) and "term" in item:
-                converted[item["term"]] = item.get("equivalents", [])
-        raw = converted
-    if not isinstance(raw, dict):
-        return {}
-    cleaned: dict[str, list[str]] = {}
-    for k, v in raw.items():
-        if not isinstance(k, str) or not k.strip():
-            continue
-        if isinstance(v, list):
-            equivalents = [str(item).strip() for item in v if isinstance(item, (str, int, float)) and str(item).strip()]
-        elif isinstance(v, str) and v.strip():
-            equivalents = [v.strip()]
-        else:
-            continue
-        if equivalents:
-            cleaned[k.strip()] = equivalents
-    return cleaned
-
-
 def analyze_and_adapt(
     provider: AIProvider,
     cv: CVData,
     job_text: str,
     real_context: str = "",
     profile_type: str = "developer",
-) -> tuple[JobDescription, CVData, dict[str, list[str]]]:
+) -> tuple[JobDescription, CVData]:
     """Single API call: analyze job description and adapt the CV simultaneously.
 
-    Returns (job, adapted_cv, keyword_equivalences). The equivalences map is the LLM's
-    suggested synonym pairs used downstream by ATS scoring to avoid false negatives.
+    Returns the extracted job and a candidate CV for deterministic validation.
     """
     cv_dict = cv.model_dump(exclude={"raw_markdown"})
     prompt = combined_analyze_adapt_prompt(
@@ -588,9 +550,18 @@ def analyze_and_adapt(
             "truncated or malformed. Check the JSON warnings in the activity log and retry."
         )
 
-    equivalences = _coerce_equivalences(data.get("keyword_equivalences"))
-
     cv_data = data.get("adapted_cv", {})
+    if (
+        not isinstance(cv_data, dict)
+        or not isinstance(cv_data.get("summary"), str)
+        or not cv_data["summary"].strip()
+        or not isinstance(cv_data.get("experience"), list)
+        or len(cv_data["experience"]) != len(cv.experience)
+        or not isinstance(cv_data.get("projects"), list)
+        or len(cv_data["projects"]) != len(cv.projects)
+        or not isinstance(cv_data.get("skills"), list)
+    ):
+        raise ValueError("Incomplete AI adaptation: summary, roles, projects or skills are missing. Retry generation.")
     detected_lang = "en" if profile_type == "bpo" else (job.detected_language or cv.detected_language)
 
     skill_categories = []
@@ -643,7 +614,7 @@ def analyze_and_adapt(
         else:
             adapted.projects.append(orig)
 
-    return job, adapted, equivalences
+    return job, adapted
 
 
 def refine_cv(
@@ -651,6 +622,8 @@ def refine_cv(
     adapted: CVData,
     job: JobDescription,
     profile_type: str = "developer",
+    source_cv: CVData | None = None,
+    real_context: str = "",
 ) -> CVData:
     """Second AI pass: critique the adapted CV as a senior recruiter and rewrite weak parts.
 
@@ -667,6 +640,9 @@ def refine_cv(
             job_skills=job.required_skills + job.preferred_skills,
             language=job.detected_language,
             profile_type=profile_type,
+            source_cv_json=json.dumps(source_cv.model_dump(exclude={"raw_markdown"}), ensure_ascii=False)
+            if source_cv else "",
+            real_context=real_context,
         )
         data = provider.chat_json(get_system_prompt(profile_type), prompt, schema=REFINE_SCHEMA)
         data = _strip_markdown(_clean_none_values(data))

@@ -1,0 +1,14 @@
+{
+  "source_url": "https://example.com/jobs/123",
+  "title": "Python Developer",
+  "company": "Example",
+  "description": "Python developer for Example",
+  "location": "Colombia",
+  "modality": "remote",
+  "application_type": "external",
+  "published_at": null,
+  "published_label": null,
+  "original_date_in_description": null,
+  "checked_at": null,
+  "salary": null
+}

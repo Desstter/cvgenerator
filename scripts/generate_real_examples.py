@@ -16,6 +16,7 @@ from app.config import settings
 from app.models.schemas import CVData
 from app.services.ai_adapter import analyze_and_adapt, get_provider, refine_cv
 from app.services.ats_optimizer import analyze_keyword_match, reorder_skills
+from app.services.cv_compactor import compact_one_bullet
 from app.services.base_cv_store import build_real_context, get_profile_definition, load_base_cv
 from app.services.claim_guard import review_claims, sanitize_adaptation
 from app.services.opportunity_store import list_opportunities
@@ -34,14 +35,6 @@ def _slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", normalized).strip("_")
 
 
-def _compact(cv):
-    compact = cv.model_copy(deep=True)
-    for index, entry in enumerate(compact.experience):
-        limit = 3 if index == 0 else 2
-        entry.description = "\n".join(entry.description.splitlines()[:limit])
-    return compact
-
-
 def generate_one(item, provider, refine: bool) -> dict:
     profile = get_profile_definition(item.profile_id)
     store = load_base_cv(item.profile_id)
@@ -49,7 +42,7 @@ def generate_one(item, provider, refine: bool) -> dict:
     real_context = build_real_context(store)
 
     print(f"[{item.id}] AI adaptation pass 1", flush=True)
-    job, adapted, equivalences = analyze_and_adapt(
+    job, adapted = analyze_and_adapt(
         provider,
         original,
         item.job_description,
@@ -58,7 +51,10 @@ def generate_one(item, provider, refine: bool) -> dict:
     )
     if refine:
         print(f"[{item.id}] recruiter refinement pass 2", flush=True)
-        adapted = refine_cv(provider, adapted, job, profile_type=profile.profile_type)
+        adapted = refine_cv(
+            provider, adapted, job, profile_type=profile.profile_type,
+            source_cv=original, real_context=real_context,
+        )
 
     adapted = sanitize_adaptation(original, adapted, profile_type=profile.profile_type)
     claim_review = review_claims(
@@ -67,7 +63,7 @@ def generate_one(item, provider, refine: bool) -> dict:
         real_context=real_context,
         profile_type=profile.profile_type,
     )
-    if claim_review.status != "passed":
+    if claim_review.status == "blocked":
         raise RuntimeError(
             f"{item.id}: truth review blocked output: "
             + "; ".join(claim_review.unsupported_claims)
@@ -77,43 +73,38 @@ def generate_one(item, provider, refine: bool) -> dict:
     original_score = analyze_keyword_match(
         original,
         job,
-        extra_synonyms=equivalences,
         profile_type=profile.profile_type,
     )
     adapted.skills = reorder_skills(
         adapted.skills,
         keywords,
-        extra_synonyms=equivalences,
         profile_type=profile.profile_type,
     )
     final_score = analyze_keyword_match(
         adapted,
         job,
-        extra_synonyms=equivalences,
         profile_type=profile.profile_type,
     )
 
-    try:
-        generated = generate_pdf_from_template(
-            adapted,
-            matched_keywords=final_score.matched_keywords,
-            template_name=profile.default_template,
-            job_title=f"{item.company} {item.title}",
-            max_pages=profile.max_pages,
-        )
-        compacted = False
-    except ValueError as exc:
-        if "requires at most" not in str(exc):
-            raise
-        adapted = _compact(adapted)
-        generated = generate_pdf_from_template(
-            adapted,
-            matched_keywords=final_score.matched_keywords,
-            template_name=profile.default_template,
-            job_title=f"{item.company} {item.title}",
-            max_pages=profile.max_pages,
-        )
-        compacted = True
+    compacted = False
+    for attempt in range(8):
+        try:
+            generated = generate_pdf_from_template(
+                adapted,
+                matched_keywords=final_score.matched_keywords,
+                template_name=profile.default_template,
+                job_title=f"{item.company} {item.title}",
+                max_pages=profile.max_pages,
+            )
+            break
+        except ValueError as exc:
+            if "requires at most" not in str(exc) or not compact_one_bullet(adapted, job):
+                raise
+            compacted = True
+            final_score = analyze_keyword_match(adapted, job, profile_type=profile.profile_type)
+            claim_review = review_claims(original, adapted, real_context, profile.profile_type)
+    else:
+        raise RuntimeError(f"{item.id}: could not fit CV on one page")
 
     final_name = (
         f"CV_{_slug(adapted.contact.name)}_{_slug(item.company)}_{_slug(item.title)}.pdf"

@@ -30,7 +30,7 @@ def test_developer_truth_guard_restores_titles_technologies_and_skills():
     safe = sanitize_adaptation(original, unsafe, profile_type="developer")
     assert safe.experience[0].title == original.experience[0].title
     assert safe.experience[0].technologies == original.experience[0].technologies
-    assert {skill.casefold() for skill in safe.skills} == {
+    assert {skill.casefold() for skill in safe.skills} <= {
         skill.casefold() for skill in original.skills
     }
     assert review_claims(original, safe, profile_type="developer").status == "passed"

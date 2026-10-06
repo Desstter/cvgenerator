@@ -1,6 +1,10 @@
 """Persistent stores for the independent CV profiles used by the application."""
 
 import json
+import os
+import shutil
+import uuid
+from datetime import datetime
 from pathlib import Path
 
 from app.models.schemas import (
@@ -8,7 +12,6 @@ from app.models.schemas import (
     ExperienceContextEntry,
     ProfileDefinition,
 )
-from app.data.base_cv import get_base_cv, EXPERIENCE_CONTEXT
 from app.config import settings
 
 DATA_DIR = settings.cv_data_dir
@@ -54,6 +57,9 @@ def list_profile_definitions() -> list[ProfileDefinition]:
 
 
 def _seed_developer() -> BaseCVStore:
+    # Personal seed data is only needed by the GUI fallback, not the explicit CLI.
+    from app.data.base_cv import get_base_cv, EXPERIENCE_CONTEXT
+
     definition = PROFILE_DEFINITIONS["developer"]
     return BaseCVStore(
         profile_id=definition.id,
@@ -93,10 +99,9 @@ def load_base_cv(profile_id: str = "developer") -> BaseCVStore:
         store.display_name = definition.display_name
         store.profile_type = definition.profile_type
         return store
-    except (json.JSONDecodeError, OSError, ValueError):
-        if profile_id == "developer":
-            return _seed_developer()
-        raise ValueError(f"The '{profile_id}' CV data file is invalid")
+    except (json.JSONDecodeError, OSError, ValueError) as exc:
+        # A damaged edited profile must not silently become the packaged identity.
+        raise ValueError(f"The '{profile_id}' CV data file is invalid") from exc
 
 
 def save_base_cv(store: BaseCVStore, profile_id: str | None = None) -> BaseCVStore:
@@ -111,10 +116,20 @@ def save_base_cv(store: BaseCVStore, profile_id: str | None = None) -> BaseCVSto
     store.profile_type = definition.profile_type
     store_file = PROFILE_FILES[target_id]
     store_file.parent.mkdir(parents=True, exist_ok=True)
-    store_file.write_text(
-        store.model_dump_json(indent=2, exclude={"cv": {"raw_markdown"}}),
-        encoding="utf-8",
-    )
+    serialized = store.model_dump_json(indent=2, exclude={"cv": {"raw_markdown"}})
+    if store_file.exists() and store_file.read_text(encoding="utf-8") == serialized:
+        return store
+    temporary = store_file.with_name(f".{store_file.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(serialized, encoding="utf-8")
+        if store_file.exists():
+            revisions = store_file.parent / "revisions"
+            revisions.mkdir(exist_ok=True)
+            backup = revisions / f"{target_id}_{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}.json"
+            shutil.copy2(store_file, backup)
+        os.replace(temporary, store_file)
+    finally:
+        temporary.unlink(missing_ok=True)
     return store
 
 
@@ -131,4 +146,10 @@ def build_real_context(store: BaseCVStore) -> str:
         lines.append("REAL achievements and transferable evidence:")
         for achievement in ctx.real_achievements:
             lines.append(f"  - {achievement}")
+        for index, fact in enumerate(ctx.facts, start=1):
+            if fact.verified and fact.action.strip():
+                lines.append(
+                    f"  - FACT {index}: action={fact.action}; scope={fact.scope}; "
+                    f"result={fact.result}; metric={fact.metric}; source={fact.source}"
+                )
     return "\n".join(lines)

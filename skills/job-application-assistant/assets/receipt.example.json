@@ -1,0 +1,7 @@
+{
+  "confirmation_text": "TEXTO_REAL_OBSERVADO_EN_EL_PORTAL",
+  "observed_at": "2026-10-05T12:00:00-05:00",
+  "destination_url": "https://example.com/application/confirmation",
+  "application_id": null,
+  "screenshot_path": null
+}

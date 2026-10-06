@@ -1,41 +1,6 @@
-"""Tests for the quality-pipeline additions: equivalence coercion (list + legacy dict
-formats), recruiter-facing PDF filenames, and skill-category parsing."""
+"""Tests for recruiter-facing PDF filenames and skill-category parsing."""
 from app.models.schemas import CVData, ContactInfo, SkillCategory
-from app.services.ai_adapter import _coerce_equivalences
 from app.services.pdf_generator import _slugify, _build_filename
-
-
-# ── _coerce_equivalences ─────────────────────────────────────────────────────
-
-def test_equivalences_list_format():
-    raw = [
-        {"term": "React", "equivalents": ["ReactJS", "React.js"]},
-        {"term": "CI/CD", "equivalents": ["GitHub Actions"]},
-    ]
-    assert _coerce_equivalences(raw) == {
-        "React": ["ReactJS", "React.js"],
-        "CI/CD": ["GitHub Actions"],
-    }
-
-
-def test_equivalences_legacy_dict_format():
-    assert _coerce_equivalences({"React": ["ReactJS"]}) == {"React": ["ReactJS"]}
-
-
-def test_equivalences_malformed_entries_dropped():
-    raw = [
-        {"term": "React", "equivalents": ["ReactJS"]},
-        {"equivalents": ["orphan"]},          # no term
-        "not a dict",
-        {"term": "", "equivalents": ["x"]},   # empty term
-    ]
-    assert _coerce_equivalences(raw) == {"React": ["ReactJS"]}
-
-
-def test_equivalences_garbage_returns_empty():
-    assert _coerce_equivalences(None) == {}
-    assert _coerce_equivalences("nope") == {}
-    assert _coerce_equivalences(42) == {}
 
 
 # ── PDF filename ─────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 app/data/history.json
+app/data/revisions/
 output/
 tmp/
 uploads/
@@ -18,3 +19,7 @@ desktop.ini
 *.md
 
 venv.*/
+workspaces/
+!docs/*.md
+!skills/**/*.md
+!AGENTS.md

@@ -1,4 +1,4 @@
-from difflib import SequenceMatcher
+import re
 from app.models.schemas import CVData, JobDescription, ATSScore
 
 # Synonym mapping for common technical terms.
@@ -23,12 +23,11 @@ SYNONYM_MAP = {
 }
 
 BPO_EQUIVALENCES = {
-    "customer service": ["customer support", "customer-oriented communication", "client solution delivery"],
-    "communication skills": ["bilingual communication", "clear written communication"],
-    "problem solving": ["problem resolution", "technical troubleshooting"],
-    "teamwork": ["team coordination", "remote collaboration"],
-    "computer skills": ["digital fluency"],
-    "english": ["english (upper-intermediate, b2+)", "bilingual communication"],
+    "customer service": ["customer support"],
+    "communication skills": ["communication"],
+    "problem solving": ["problem resolution"],
+    "teamwork": ["team collaboration"],
+    "english": ["english (upper-intermediate, b2+)", "english"],
 }
 
 
@@ -49,7 +48,7 @@ def _normalize(text: str) -> str:
 
 
 def _expand_with_synonyms(text: str, extra: dict[str, list[str]] | None = None) -> set[str]:
-    """Return all synonym variants for a normalized term, including LLM-provided ones."""
+    """Return synonym variants, including caller-owned curated equivalences."""
     normalized = _normalize(text)
     variants: set[str] = {normalized}
 
@@ -82,22 +81,10 @@ def _fuzzy_match(
     extra_synonyms: dict[str, list[str]] | None = None,
     threshold: float = 0.85,
 ) -> bool:
-    """Check if keyword matches text approximately (exact / synonym / fuzzy word)."""
-    kw_norm = _normalize(keyword)
-
-    if kw_norm in text:
-        return True
-
+    """Match full terms only. Partial words and typo guesses inflate coverage."""
     for variant in _expand_with_synonyms(keyword, extra_synonyms):
-        if variant and variant in text:
+        if variant and re.search(r"(?<!\w)" + re.escape(variant) + r"(?!\w)", text):
             return True
-
-    words = text.split()
-    for word in words:
-        if len(word) > 3 and len(kw_norm) > 3:
-            if SequenceMatcher(None, kw_norm, word).ratio() > threshold:
-                return True
-
     return False
 
 
@@ -119,23 +106,50 @@ def _extract_cv_text(cv: CVData) -> str:
     return _normalize(" ".join(parts))
 
 
+def _cv_evidence_pieces(cv: CVData) -> list[str]:
+    pieces = [cv.headline, cv.summary, *cv.skills, *cv.certifications, *cv.languages]
+    for exp in cv.experience:
+        pieces.extend(exp.description.splitlines())
+        pieces.extend(exp.technologies)
+    for project in cv.projects:
+        pieces.extend(project.description.splitlines())
+        pieces.extend(project.technologies)
+    return [piece.strip() for piece in pieces if piece.strip()]
+
+
+def _unique_terms(terms: list[str], seen: set[str]) -> list[str]:
+    output = []
+    for term in terms:
+        normalized = _normalize(term)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            output.append(term)
+    return output
+
+
 def analyze_keyword_match(
     cv: CVData,
     job: JobDescription,
     extra_synonyms: dict[str, list[str]] | None = None,
     profile_type: str = "developer",
 ) -> ATSScore:
-    """Score how well the CV matches the job description keywords using weighted fuzzy matching."""
-    cv_text = _extract_cv_text(cv)
+    """A local keyword-coverage estimate, not an external ATS prediction."""
+    pieces = _cv_evidence_pieces(cv)
     extra_synonyms = _merge_profile_synonyms(extra_synonyms, profile_type)
 
-    required = list(dict.fromkeys(job.required_skills))
-    preferred = list(dict.fromkeys(job.preferred_skills))
-    general = list(dict.fromkeys(job.keywords))
+    seen: set[str] = set()
+    required = _unique_terms(job.required_skills, seen)
+    preferred = _unique_terms(job.preferred_skills, seen)
+    general = _unique_terms(job.keywords, seen)
 
-    matched_req = [kw for kw in required if _fuzzy_match(kw, cv_text, extra_synonyms)]
-    matched_pref = [kw for kw in preferred if _fuzzy_match(kw, cv_text, extra_synonyms)]
-    matched_gen = [kw for kw in general if _fuzzy_match(kw, cv_text, extra_synonyms)]
+    evidence = {
+        term: next((piece for piece in pieces if _fuzzy_match(term, _normalize(piece), extra_synonyms)), "")
+        for term in required + preferred + general
+    }
+
+    matched_req = [kw for kw in required if evidence[kw]]
+    matched_pref = [kw for kw in preferred if evidence[kw]]
+    matched_gen = [kw for kw in general if evidence[kw]]
 
     missing_req = [kw for kw in required if kw not in matched_req]
     missing_pref = [kw for kw in preferred if kw not in matched_pref]
@@ -180,9 +194,7 @@ def analyze_keyword_match(
             )
 
     if not suggestions:
-        suggestions.append("Excellent match! Your CV covers all key requirements.")
-    elif score >= 80:
-        suggestions.append("Strong match! Your CV is well-aligned with this role.")
+        suggestions.append("All extracted terms appear in the CV; review their relevance and evidence.")
     elif score < 50 and profile_type != "bpo":
         suggestions.append("Use the missing requirements to decide whether the role is a realistic fit.")
     elif score < 50:
@@ -195,6 +207,7 @@ def analyze_keyword_match(
         general_score=round(len(matched_gen) / len(general) * 100 if general else 0, 1),
         matched_keywords=list(dict.fromkeys(matched_req + matched_pref + matched_gen)),
         missing_keywords=list(dict.fromkeys(missing_req + missing_pref + missing_gen)),
+        matched_evidence={kw: evidence[kw][:240] for kw in matched_req + matched_pref + matched_gen},
         suggestions=suggestions,
     )
 

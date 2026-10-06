@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CV Generator — ATS-Optimized</title>
+  <title>CV Generator — Evidence-first CVs</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <div class="container">
     <header>
       <h1>My CV Generator</h1>
-      <p>Your CV is the source. Paste a job description to get an ATS-optimized PDF tailored for the role.</p>
+      <p>Your CV is the source. Paste a job description, review the evidence and generate a tailored PDF.</p>
     </header>
 
     <div class="error-msg" id="error-msg">
@@ -104,6 +104,15 @@
         <div class="filename" id="filename"></div>
       </div>
       <input type="file" id="file-input" accept=".pdf">
+      <div id="import-review" style="display:none; margin-top:16px;">
+        <h3>Confirm imported CV</h3>
+        <p id="import-summary"></p>
+        <ul id="import-warnings"></ul>
+        <label for="parsed-cv-json">Correct extracted fields if needed</label>
+        <textarea id="parsed-cv-json" rows="12" style="width:100%;font-family:monospace;"></textarea>
+        <p id="import-validation"></p>
+        <label><input type="checkbox" id="import-confirmed"> I checked employers, dates, technologies and contact details</label>
+      </div>
     </div>
 
     <!-- Submit -->
@@ -146,7 +155,7 @@
           <div class="score-value" id="score-value">0%</div>
         </div>
       </div>
-      <div class="score-label">ATS Match Score</div>
+      <div class="score-label">Estimated keyword coverage</div>
 
       <!-- ATS breakdown by category -->
       <div class="ats-breakdown">
@@ -205,14 +214,19 @@
       </details>
 
       <div class="claim-review" id="claim-review-section" style="display:none;">
-        <h3>Truth & Claim Review</h3>
+        <h3>Claim Review</h3>
         <div id="claim-review-content"></div>
       </div>
 
       <details class="content-review" id="content-review-section">
-        <summary>Review Generated Content Before Download</summary>
+        <summary>Review and edit generated content</summary>
         <div id="content-review-content"></div>
+        <button class="btn" id="save-generated-btn" style="margin-top:10px;">Save edits and regenerate PDF</button>
       </details>
+
+      <label id="claim-confirm-wrap" style="display:block;margin-top:12px;">
+        <input type="checkbox" id="claim-confirmed"> I checked every rewritten claim against my experience
+      </label>
 
       <div class="suggestions" id="suggestions-box" style="display:none;">
         <strong>Suggestions:</strong>

@@ -10,8 +10,8 @@
   body {
     font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     color: #17202a;
-    font-size: 9.05pt;
-    line-height: 1.29;
+    font-size: 9.8pt;
+    line-height: 1.34;
   }
   a { color: #184c63; text-decoration: none; }
   .header { border-bottom: 2.5px solid #18738a; padding-bottom: 5px; }
@@ -24,7 +24,7 @@
     font-size: 9.3pt;
     letter-spacing: .75px;
     text-transform: uppercase;
-    margin-top: 8px;
+    margin-top: 9px;
     margin-bottom: 3px;
     border-bottom: .7px solid #cbd7dc;
     padding-bottom: 1.5px;
@@ -64,7 +64,7 @@
   .entry-dates { float: right; color: #5e6970; font-size: 8pt; }
   .entry-location { color: #69757c; font-size: 7.9pt; margin-top: .5px; }
   ul { margin-top: 1px; padding-left: 13px; }
-  li { margin-bottom: 1px; padding-left: .5px; }
+  li { margin-bottom: 2px; padding-left: .5px; }
   .tech { color: #46545e; font-size: 7.9pt; margin-top: 1px; }
   .tech b { color: #184c63; }
   .education { page-break-inside: avoid; }
@@ -111,6 +111,18 @@
   {% endfor %}
   {% endif %}
 
+  {% if cv.projects %}
+  <h2>{{ "Proyectos" if cv.detected_language == "es" else "Projects" }}</h2>
+  {% for project in cv.projects %}
+  <div class="entry">
+    <span class="entry-title">{{ project.name }}</span>
+    {% if project.url %}<span class="entry-company"> | <a href="{{ project.url }}">{{ project.url }}</a></span>{% endif %}
+    {% if project.description %}<p>{{ project.description }}</p>{% endif %}
+    {% if project.technologies %}<div class="tech">{{ project.technologies | join(', ') }}</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
   <table class="footer-row"><tr>
     <td>
       {% if cv.education %}
@@ -139,6 +151,10 @@
       {% endif %}
     </table>
   </div>
+  {% endif %}
+  {% if cv.certifications %}
+  <h2>{{ "Certificaciones" if cv.detected_language == "es" else "Certifications" }}</h2>
+  <p>{{ cv.certifications | join(' · ') }}</p>
   {% endif %}
 </body>
 </html>

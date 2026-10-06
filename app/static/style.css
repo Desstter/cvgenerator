@@ -572,6 +572,15 @@ select {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.history-outcome { font-size: 12px; padding: 4px; max-width: 95px; }
+
+@media (max-width: 700px) {
+  .history-row { align-items: flex-start; flex-direction: column; }
+  .history-right { justify-content: flex-start; }
 }
 
 .history-date, .history-lang {

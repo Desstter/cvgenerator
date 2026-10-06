@@ -39,6 +39,9 @@ def save_application(
     pdf_filename: str,
     detected_language: str,
     profile_id: str = "developer",
+    snapshot: dict | None = None,
+    reviewed: bool = True,
+    parent_id: str = "",
 ) -> dict:
     record = {
         "id": uuid.uuid4().hex[:8],
@@ -51,12 +54,44 @@ def save_application(
         "pdf_filename": pdf_filename,
         "detected_language": detected_language,
         "profile_id": profile_id,
+        "snapshot": snapshot or {},
+        "reviewed": reviewed,
+        "parent_id": parent_id,
+        "outcome": "draft",
+        "notes": "",
     }
     with _history_lock:
         history = load_history()
         history.insert(0, record)
         _write_history(history)
     return record
+
+
+def load_application(record_id: str) -> dict | None:
+    return next((record for record in load_history() if record.get("id") == record_id), None)
+
+
+def confirm_application(record_id: str) -> bool:
+    with _history_lock:
+        history = load_history()
+        for record in history:
+            if record.get("id") == record_id:
+                record["reviewed"] = True
+                _write_history(history)
+                return True
+    return False
+
+
+def update_application_feedback(record_id: str, outcome: str, notes: str) -> bool:
+    with _history_lock:
+        history = load_history()
+        for record in history:
+            if record.get("id") == record_id:
+                record["outcome"] = outcome
+                record["notes"] = notes
+                _write_history(history)
+                return True
+    return False
 
 
 def delete_application(record_id: str) -> bool:

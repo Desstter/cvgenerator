@@ -136,7 +136,7 @@ def test_bpo_ai_adapter_code_protects_titles_technologies_and_language():
             }
 
     provider = FakeProvider()
-    _, adapted, _ = analyze_and_adapt(
+    _, adapted = analyze_and_adapt(
         provider,
         store.cv,
         "Representante bilingüe de servicio al cliente",

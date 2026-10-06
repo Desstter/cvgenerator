@@ -7,9 +7,8 @@ import tempfile
 import unicodedata
 import uuid
 import pymupdf as fitz
-from io import BytesIO
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from xhtml2pdf import pisa
 
 from app.config import settings
@@ -198,6 +197,44 @@ def _render_pdf(html_content: str, output_path: Path) -> None:
             raise RuntimeError(f"PDF generation failed with {pisa_status.err} errors")
 
 
+def verify_pdf_content(path: Path, cv: CVData, template_name: str, max_pages: int | None = None) -> None:
+    """Check the delivered artifact, including text lost by rendering or overflow."""
+    cv = _localize_cv(cv)
+    with fitz.open(str(path)) as document:
+        if not document.page_count:
+            raise ValueError("Generated PDF has no pages")
+        if max_pages is not None and document.page_count > max_pages:
+            raise ValueError(
+                f"Generated PDF has {document.page_count} pages; this profile requires at most {max_pages}. "
+                "Shorten the generated content and try again."
+            )
+        extracted = " ".join(page.get_text(sort=True) for page in document)
+
+    def compact(value: str) -> str:
+        ascii_text = unicodedata.normalize("NFKD", value).casefold()
+        return "".join(char for char in ascii_text if char.isalnum())
+
+    actual = compact(extracted)
+    expected = [cv.contact.name, cv.contact.email, cv.contact.phone,
+                cv.contact.location, cv.headline, cv.summary, *cv.skills, *cv.languages]
+    for entry in cv.education:
+        expected.extend([entry.institution, entry.degree, entry.dates])
+    for entry in cv.experience:
+        expected.extend([entry.company, entry.title, entry.dates])
+        expected.extend(line.strip().lstrip("-•* ").strip() for line in entry.description.splitlines())
+    if template_name in {"modern", "classic", "technical"}:
+        expected.extend([cv.contact.website, cv.contact.github])
+        for project in cv.projects:
+            expected.extend([project.name, project.description])
+        expected.extend(cv.certifications)
+    missing = [part for part in expected if part and compact(part) not in actual]
+    if missing:
+        raise ValueError(
+            "Generated PDF lost or changed content: "
+            + "; ".join(repr(part[:80]) for part in missing[:5])
+        )
+
+
 def generate_pdf_from_template(
     cv: CVData,
     matched_keywords: list[str] | None = None,
@@ -209,7 +246,8 @@ def generate_pdf_from_template(
     if template_name not in ALLOWED_TEMPLATES:
         raise ValueError(f"Unknown PDF template: {template_name}")
     cv = _localize_cv(cv)
-    env = Environment(loader=FileSystemLoader(str(settings.templates_dir)))
+    env = Environment(loader=FileSystemLoader(str(settings.templates_dir)),
+                      autoescape=select_autoescape(["html", "xml"]))
     template = env.get_template(f"{template_name}.html")
 
     icons_dir = (settings.static_dir / "icons").as_posix()
@@ -222,62 +260,9 @@ def generate_pdf_from_template(
 
     output_path = settings.outputs_dir / _build_filename(cv, job_title)
     _render_pdf(html_content, output_path)
-    if max_pages is not None:
-        with fitz.open(str(output_path)) as document:
-            page_count = document.page_count
-        if page_count > max_pages:
-            output_path.unlink(missing_ok=True)
-            raise ValueError(
-                f"Generated PDF has {page_count} pages; this profile requires at most {max_pages}. "
-                "Shorten the generated content and try again."
-            )
-    return output_path
-
-
-def generate_pdf_inplace(
-    original_pdf_path: str | Path,
-    original_cv: CVData,
-    adapted_cv: CVData,
-) -> Path:
-    """Attempt in-place PDF editing using PyMuPDF redaction.
-
-    Replaces text blocks in the original PDF while preserving layout.
-    Falls back to template generation if in-place editing fails.
-    """
     try:
-        doc = fitz.open(str(original_pdf_path))
-        _apply_text_replacements(doc, original_cv, adapted_cv)
-
-        output_filename = f"cv_inplace_{uuid.uuid4().hex[:8]}.pdf"
-        output_path = settings.outputs_dir / output_filename
-        doc.save(str(output_path))
-        doc.close()
-        return output_path
+        verify_pdf_content(output_path, cv, template_name, max_pages)
     except Exception:
-        # Fallback to template-based generation
-        return generate_pdf_from_template(adapted_cv)
-
-
-def _apply_text_replacements(doc: fitz.Document, original: CVData, adapted: CVData):
-    """Replace text in PDF using redaction annotations."""
-    replacements: list[tuple[str, str]] = []
-
-    # Summary replacement
-    if original.summary and adapted.summary and original.summary != adapted.summary:
-        replacements.append((original.summary[:80], adapted.summary[:80]))
-
-    # Experience description replacements
-    for orig_exp, new_exp in zip(original.experience, adapted.experience):
-        if orig_exp.description != new_exp.description:
-            orig_lines = [l.strip().lstrip("-•* ").strip() for l in orig_exp.description.split("\n") if l.strip()]
-            new_lines = [l.strip().lstrip("-•* ").strip() for l in new_exp.description.split("\n") if l.strip()]
-            for ol, nl in zip(orig_lines, new_lines):
-                if ol and nl and ol != nl:
-                    replacements.append((ol[:60], nl[:60]))
-
-    for page in doc:
-        for old_text, new_text in replacements:
-            text_instances = page.search_for(old_text)
-            for inst in text_instances:
-                page.add_redact_annot(inst, text=new_text, fontsize=0)
-        page.apply_redactions()
+        output_path.unlink(missing_ok=True)
+        raise
+    return output_path

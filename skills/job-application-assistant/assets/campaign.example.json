@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "generator_repo": "RUTA_AL_REPOSITORIO_CVGENERATOR",
+  "python": "RUTA_AL_PYTHON_DEL_ENTORNO",
+  "workspace": "RUTA_PRIVADA_POR_CANDIDATO",
+  "candidate_file": "RUTA_AL_CANDIDATE_JSON_VERIFICADO",
+  "profile": "developer",
+  "provider": "gemini",
+  "criteria": {
+    "search_languages": ["es", "en"],
+    "search_terms": ["software developer", "desarrollador de software", "full stack developer", "desarrollador full stack"],
+    "remote_from_countries": ["Colombia"],
+    "onsite_cities": ["Cali"],
+    "modalities": ["remote", "hybrid", "onsite"],
+    "modality_priority": ["remote", "hybrid", "onsite"],
+    "preferred_max_age_days": 7,
+    "max_age_days": 14,
+    "minimum_salary": null,
+    "salary_currency": null,
+    "salary_period": "month",
+    "unknown_salary_action": "review",
+    "contract_types": [],
+    "minimum_fit_score": 65,
+    "max_improvement_cycles": 2,
+    "max_applications_per_session": 10
+  },
+  "application_answers": {
+    "availability": {"value": null, "verified": false},
+    "salary_expectation": {"value": null, "currency": null, "period": null, "verified": false},
+    "work_authorization": {"value": null, "country": null, "verified": false},
+    "technology_years": {},
+    "reusable_answers": []
+  },
+  "permissions": {
+    "mode": "prepare_only",
+    "authorized_destinations": [],
+    "authorized_data_categories": [],
+    "authorized_ai_provider": null,
+    "submit_authorized": false,
+    "standard_application_terms_authorized": false,
+    "captcha": "request_user_when_needed",
+    "account_creation": "request_user_when_needed",
+    "optional_marketing": false
+  }
+}

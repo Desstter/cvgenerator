@@ -29,13 +29,16 @@ const suggestionsList = document.getElementById('suggestions-list');
 const downloadBtn = document.getElementById('download-btn');
 const useCustomCv = document.getElementById('use-custom-cv');
 const uploadSection = document.getElementById('upload-section');
+const importReview = document.getElementById('import-review');
+const importConfirmed = document.getElementById('import-confirmed');
+const parsedCvJson = document.getElementById('parsed-cv-json');
+const claimConfirmed = document.getElementById('claim-confirmed');
 
 const baseCvBtn = document.getElementById('base-cv-btn');
 
 // Download base CV (uses the currently selected template)
 baseCvBtn.addEventListener('click', () => {
-  const tpl = templateSelect.value === 'original' ? 'modern' : templateSelect.value;
-  const params = new URLSearchParams({ profile: profileSelect.value, template: tpl });
+  const params = new URLSearchParams({ profile: profileSelect.value, template: templateSelect.value });
   window.open('/api/base-cv?' + params.toString(), '_blank');
 });
 
@@ -94,26 +97,18 @@ opportunitySelect.addEventListener('change', () => {
 
 let selectedFile = null;
 let downloadFilename = null;
+let currentResult = null;
+let generatedEditsPending = false;
 
-// Toggle custom CV upload and "Original Layout" template option
+// A custom PDF must be parsed and confirmed before adaptation.
 useCustomCv.addEventListener('change', () => {
   uploadSection.style.display = useCustomCv.checked ? 'block' : 'none';
-
-  // Add/remove "Original Layout" option based on whether a custom CV is being used
-  const hasOriginal = Array.from(templateSelect.options).some(o => o.value === 'original');
-  if (useCustomCv.checked && !hasOriginal) {
-    const opt = document.createElement('option');
-    opt.value = 'original';
-    opt.textContent = 'Original Layout';
-    templateSelect.appendChild(opt);
-  } else if (!useCustomCv.checked) {
-    if (hasOriginal) {
-      const idx = Array.from(templateSelect.options).findIndex(o => o.value === 'original');
-      templateSelect.remove(idx);
-    }
+  if (!useCustomCv.checked) {
     selectedFile = null;
     filenameEl.textContent = '';
-    if (templateSelect.value === 'original') templateSelect.value = 'modern';
+    importReview.style.display = 'none';
+    importConfirmed.checked = false;
+    parsedCvJson.value = '';
   }
 
   updateButton();
@@ -146,22 +141,57 @@ fileInput.addEventListener('change', () => {
   }
 });
 
-function selectFile(file) {
+async function selectFile(file) {
   selectedFile = file;
-  filenameEl.textContent = file.name;
+  filenameEl.textContent = `Parsing ${file.name}…`;
+  importConfirmed.checked = false;
+  importReview.style.display = 'none';
+  updateButton();
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res = await fetch('/api/analyze', { method: 'POST', body: form });
+    if (!res.ok) throw new Error((await parseApiError(res)).message);
+    const data = await res.json();
+    if (selectedFile !== file) return;
+    parsedCvJson.value = JSON.stringify(data.cv, null, 2);
+    const roles = (data.cv.experience || []).map(e => `${e.title} — ${e.company} (${e.dates})`).join('; ');
+    document.getElementById('import-summary').textContent = `${data.cv.contact?.name || 'Name missing'} · ${roles}`;
+    const warnings = document.getElementById('import-warnings');
+    warnings.innerHTML = '';
+    [...(data.critical_errors || []), ...(data.warnings || [])].forEach(warning => {
+      const item = document.createElement('li'); item.textContent = warning; warnings.appendChild(item);
+    });
+    filenameEl.textContent = file.name;
+    importReview.style.display = 'block';
+  } catch (error) {
+    filenameEl.textContent = file.name;
+    showError(error.message || 'Could not parse PDF');
+  }
   updateButton();
 }
 
 function updateButton() {
   const hasJob = jobDesc.value.trim().length > 0;
   if (useCustomCv.checked) {
-    adaptBtn.disabled = !(selectedFile && hasJob);
+    let valid = false;
+    try {
+      const cv = JSON.parse(parsedCvJson.value);
+      valid = Boolean(cv.contact?.name?.trim() && Array.isArray(cv.experience) && cv.experience.length &&
+        cv.experience.every(e => e.company?.trim() && e.title?.trim() && e.dates?.trim()));
+    } catch (_) {}
+    document.getElementById('import-validation').textContent = valid
+      ? 'Required identity and employment fields are present.'
+      : 'Correct the name, employer, title and dates for every role before continuing.';
+    adaptBtn.disabled = !(selectedFile && hasJob && importConfirmed.checked && valid);
   } else {
     adaptBtn.disabled = !hasJob;
   }
 }
 
 jobDesc.addEventListener('input', updateButton);
+importConfirmed.addEventListener('change', updateButton);
+parsedCvJson.addEventListener('input', updateButton);
 
 let errorHideTimer = null;
 
@@ -198,6 +228,8 @@ async function parseApiError(response) {
     if (typeof d === 'string') message = d;
     else if (d && typeof d === 'object') {
       message = d.message || message;
+      if (d.review?.unsupported_claims?.length) message += ': ' + d.review.unsupported_claims.join('; ');
+      if (d.errors?.length) message += ': ' + d.errors.join('; ');
       traceback = d.traceback || '';
     }
   } catch (_) { /* non-JSON body */ }
@@ -369,7 +401,7 @@ function schedulePoll() {
 // Adapt CV
 adaptBtn.addEventListener('click', async () => {
   if (!jobDesc.value.trim()) return;
-  if (useCustomCv.checked && !selectedFile) return;
+  if (useCustomCv.checked && (!selectedFile || !importConfirmed.checked)) return;
 
   hideError();
   showProgress('Contacting server…');
@@ -387,7 +419,12 @@ adaptBtn.addEventListener('click', async () => {
   formData.append('profile_id', profileSelect.value);
 
   if (useCustomCv.checked && selectedFile) {
-    formData.append('file', selectedFile);
+    try { JSON.parse(parsedCvJson.value); }
+    catch (_) {
+      showError('The corrected CV JSON is invalid.'); hideProgress(); adapting = false;
+      adaptBtn.textContent = 'Generate Adapted CV'; updateButton(); return;
+    }
+    formData.append('confirmed_cv_json', parsedCvJson.value);
   }
 
   try {
@@ -453,6 +490,7 @@ function setOverallScore(scoreAfter, scoreBefore) {
 }
 
 function showResults(result) {
+  currentResult = result;
   resultsSection.style.display = 'block';
 
   // Overall score — before vs after
@@ -474,6 +512,7 @@ function showResults(result) {
     const tag = document.createElement('span');
     tag.className = 'tag matched';
     tag.textContent = kw;
+    tag.title = (result.ats_score.matched_evidence || {})[kw] || '';
     matchedKeywords.appendChild(tag);
   });
 
@@ -575,53 +614,90 @@ function showResults(result) {
     jaContent.appendChild(row);
   }
 
-  // Deterministic truth/claim audit for the BPO profile
+  // Rewritten claims are shown with the closest source evidence for review.
   const claimSection = document.getElementById('claim-review-section');
   const claimContent = document.getElementById('claim-review-content');
   claimContent.innerHTML = '';
   const review = result.claim_review || {};
-  if (result.profile_id === 'bilingual_customer_service') {
-    claimSection.style.display = 'block';
-    const status = document.createElement('p');
-    status.className = review.status === 'passed' ? 'claim-pass' : 'claim-blocked';
-    status.textContent = review.status === 'passed'
-      ? 'Passed: no unsupported BPO claims were detected.'
-      : 'Blocked: unsupported claims require correction.';
-    claimContent.appendChild(status);
-    [...(review.notes || []), ...(review.transferable_strengths || []).map(s => 'Verified strength: ' + s)]
-      .forEach(note => {
-        const item = document.createElement('div');
-        item.className = 'claim-note';
-        item.textContent = '✓ ' + note;
-        claimContent.appendChild(item);
-      });
-  } else {
-    claimSection.style.display = 'none';
-  }
+  claimSection.style.display = 'block';
+  const status = document.createElement('p');
+  status.className = review.status === 'passed' ? 'claim-pass' : 'claim-blocked';
+  status.textContent = review.status === 'passed'
+    ? 'No rewritten claims need review.'
+    : `${(review.review_items || []).length} rewritten claims need your confirmation.`;
+  claimContent.appendChild(status);
+  (review.review_items || []).forEach(entry => {
+    const item = document.createElement('div');
+    item.className = 'claim-note';
+    const label = document.createElement('strong');
+    label.textContent = entry.field + ': ';
+    const generated = document.createElement('span');
+    generated.textContent = entry.generated;
+    const source = document.createElement('p');
+    source.textContent = 'Closest evidence: ' + (entry.closest_source || 'None recorded');
+    const checkLabel = document.createElement('label');
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.dataset.claimCheck = entry.field;
+    checkLabel.append(check, document.createTextNode(' I verified this claim'));
+    item.append(label, generated, source, checkLabel);
+    claimContent.appendChild(item);
+  });
 
   // Human-readable content review before the PDF download action
   const contentReview = document.getElementById('content-review-content');
-  document.getElementById('content-review-section').open = result.profile_id === 'bilingual_customer_service';
+  document.getElementById('content-review-section').open = true;
   contentReview.innerHTML = '';
   const summaryTitle = document.createElement('h4');
   summaryTitle.textContent = adapted.headline || 'Professional Summary';
-  const summaryText = document.createElement('p');
-  summaryText.textContent = adapted.summary || '';
+  const summaryText = document.createElement('textarea');
+  summaryText.value = adapted.summary || '';
+  summaryText.dataset.cvField = 'summary';
+  summaryText.rows = 4;
+  summaryText.style.width = '100%';
   contentReview.append(summaryTitle, summaryText);
   (adapted.experience || []).forEach(exp => {
     const title = document.createElement('h4');
     title.textContent = `${exp.title} | ${exp.company}`;
-    const list = document.createElement('ul');
-    (exp.description || '').split('\n').filter(Boolean).forEach(line => {
-      const item = document.createElement('li');
-      item.textContent = line.replace(/^[•*\-]\s*/, '');
-      list.appendChild(item);
-    });
-    contentReview.append(title, list);
+    const bullets = document.createElement('textarea');
+    bullets.value = exp.description || '';
+    bullets.dataset.cvField = 'experience';
+    bullets.dataset.index = String((adapted.experience || []).indexOf(exp));
+    bullets.rows = Math.max(3, (exp.description || '').split('\n').length + 1);
+    bullets.style.width = '100%';
+    contentReview.append(title, bullets);
   });
+  (adapted.projects || []).forEach((project, index) => {
+    const title = document.createElement('h4');
+    title.textContent = `Project: ${project.name}`;
+    const description = document.createElement('textarea');
+    description.value = project.description || '';
+    description.dataset.cvField = 'project';
+    description.dataset.index = String(index);
+    description.rows = 3;
+    description.style.width = '100%';
+    contentReview.append(title, description);
+  });
+  const skillsTitle = document.createElement('h4');
+  skillsTitle.textContent = 'Displayed skills (verified master skills only, one per line)';
+  const skillsInput = document.createElement('textarea');
+  skillsInput.dataset.cvField = 'skills';
+  skillsInput.value = (adapted.skills || []).join('\n');
+  skillsInput.rows = 6;
+  skillsInput.style.width = '100%';
+  contentReview.append(skillsTitle, skillsInput);
+  generatedEditsPending = false;
+  contentReview.querySelectorAll('textarea').forEach(input => input.addEventListener('input', () => {
+    generatedEditsPending = true;
+    downloadBtn.disabled = true;
+  }));
 
   // Suggestions
-  const suggestions = result.ats_score.suggestions || [];
+  const suggestions = [
+    ...(result.evidence_questions || []).map(question => 'Evidence gap: ' + question),
+    ...(result.quality_issues || []).map(issue => 'Editorial check: ' + issue),
+    ...(result.ats_score.suggestions || []),
+  ];
   if (suggestions.length) {
     suggestionsBox.style.display = 'block';
     suggestionsList.innerHTML = '';
@@ -636,12 +712,55 @@ function showResults(result) {
 
   // Download
   downloadFilename = result.pdf_filename;
-  downloadBtn.onclick = () => {
-    window.open('/api/download/' + encodeURIComponent(downloadFilename), '_blank');
+  claimConfirmed.checked = false;
+  document.getElementById('claim-confirm-wrap').style.display = review.status === 'passed' ? 'none' : 'block';
+  const updateClaimDownload = () => {
+    const allClaimsChecked = [...claimContent.querySelectorAll('[data-claim-check]')].every(input => input.checked);
+    downloadBtn.disabled = generatedEditsPending ||
+      (review.status !== 'passed' && !(claimConfirmed.checked && allClaimsChecked));
+  };
+  claimConfirmed.onchange = updateClaimDownload;
+  claimContent.querySelectorAll('[data-claim-check]').forEach(input => input.addEventListener('change', updateClaimDownload));
+  updateClaimDownload();
+  downloadBtn.onclick = async () => {
+    if (generatedEditsPending) { showError('Save your edits and regenerate the PDF before downloading.'); return; }
+    if (review.status !== 'passed') {
+      const fields = [...claimContent.querySelectorAll('[data-claim-check]:checked')].map(input => input.dataset.claimCheck);
+      const response = await fetch('/api/history/' + encodeURIComponent(currentResult.record_id) + '/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }),
+      });
+      if (!response.ok) { showError('Could not save claim confirmation'); return; }
+    }
+    window.location.assign('/api/download/' + encodeURIComponent(downloadFilename));
   };
 
   resultsSection.scrollIntoView({ behavior: 'smooth' });
 }
+
+document.getElementById('save-generated-btn').addEventListener('click', async () => {
+  if (!currentResult?.record_id) return;
+  const edited = structuredClone(currentResult.adapted_cv);
+  edited.summary = document.querySelector('[data-cv-field="summary"]').value.trim();
+  document.querySelectorAll('[data-cv-field="experience"]').forEach(input => {
+    edited.experience[Number(input.dataset.index)].description = input.value.trim();
+  });
+  document.querySelectorAll('[data-cv-field="project"]').forEach(input => {
+    edited.projects[Number(input.dataset.index)].description = input.value.trim();
+  });
+  edited.skills = document.querySelector('[data-cv-field="skills"]').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const button = document.getElementById('save-generated-btn');
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/history/' + encodeURIComponent(currentResult.record_id) + '/revise', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(edited),
+    });
+    if (!response.ok) throw new Error((await parseApiError(response)).message);
+    showResults(await response.json());
+    loadHistory();
+    showSuccess('Edited CV saved and PDF regenerated.');
+  } catch (error) { showError(error.message || 'Could not save changes'); }
+  finally { button.disabled = false; }
+});
 
 // ── History ──────────────────────────────────────────────────────────────────
 
@@ -686,15 +805,49 @@ function renderHistory(entries) {
         <span class="history-lang">${profileLabel}</span>
         <span class="history-lang">${lang}</span>
         <span class="score-badge ${scoreClass}">${score.toFixed(0)}%</span>
-        <button class="btn-ghost history-dl" data-filename="${escHtml(entry.pdf_filename)}">PDF</button>
+        <select class="history-outcome" data-id="${entry.id}" aria-label="Application outcome">
+          <option value="draft">Draft</option><option value="applied">Applied</option>
+          <option value="interview">Interview</option><option value="offer">Offer</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <button class="btn-ghost history-dl" data-id="${entry.id}" data-filename="${escHtml(entry.pdf_filename)}">${entry.reviewed === false ? 'Review' : 'PDF'}</button>
         <button class="btn-ghost history-del" data-id="${entry.id}" title="Delete">✕</button>
       </div>`;
     historyList.appendChild(row);
+    row.querySelector('.history-outcome').value = entry.outcome || 'draft';
+  });
+
+  historyList.querySelectorAll('.history-outcome').forEach(select => {
+    select.addEventListener('change', async () => {
+      const entry = entries.find(item => item.id === select.dataset.id);
+      const response = await fetch('/api/history/' + encodeURIComponent(select.dataset.id) + '/feedback', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome: select.value, notes: entry?.notes || '' }),
+      });
+      if (!response.ok) showError('Could not save application outcome');
+      else if (entry) entry.outcome = select.value;
+    });
   });
 
   historyList.querySelectorAll('.history-dl').forEach(btn => {
-    btn.addEventListener('click', () => {
-      window.open('/api/download/' + encodeURIComponent(btn.dataset.filename), '_blank');
+    btn.addEventListener('click', async () => {
+      const entry = entries.find(item => item.id === btn.dataset.id);
+      if (entry?.reviewed === false) {
+        const response = await fetch('/api/history/' + encodeURIComponent(entry.id));
+        if (!response.ok) { showError('Could not load saved CV'); return; }
+        const full = await response.json();
+        const snap = full.snapshot || {};
+        showResults({
+          original_cv: snap.source_cv, adapted_cv: snap.adapted_cv,
+          ats_score: snap.coverage_after, original_ats_score: snap.coverage_before,
+          claim_review: snap.claim_review, job_analysis: snap.job_analysis,
+          quality_issues: snap.quality_issues || [],
+          evidence_questions: snap.evidence_questions || [],
+          pdf_filename: full.pdf_filename, profile_id: full.profile_id, record_id: full.id,
+        });
+      } else {
+        window.open('/api/download/' + encodeURIComponent(btn.dataset.filename), '_blank');
+      }
     });
   });
 
@@ -782,7 +935,7 @@ function linesToList(str) {
 function renderEditor() {
   cvEditor.innerHTML = '';
   const cv = cvStore.cv;
-  const refs = { contact: {}, experience: [], education: [], headline: null, summary: null, skills: null, languages: null, certifications: null };
+  const refs = { contact: {}, experience: [], education: [], projects: [], headline: null, summary: null, skills: null, languages: null, certifications: null };
 
   // Contact
   const contactSection = section('Contact');
@@ -813,7 +966,7 @@ function renderEditor() {
   // Experience
   const expSection = section('Experience');
   (cv.experience || []).forEach((exp) => {
-    const ctx = (cvStore.experience_context || {})[exp.company] || { real_technologies: [], real_achievements: [] };
+    const ctx = (cvStore.experience_context || {})[exp.company] || { real_technologies: [], real_achievements: [], facts: [] };
     const block = document.createElement('div');
     block.className = 'editor-entry';
 
@@ -839,18 +992,45 @@ function renderEditor() {
       : '<span class="editor-hidden-note">Hidden — verified evidence used for truthful rewriting, never printed verbatim</span>';
     const fRealTech = field('Real technologies (one per line)', (ctx.real_technologies || []).join('\n'), { textarea: true, rows: 3 });
     const fRealAch = field('Real achievements (one per line)', (ctx.real_achievements || []).join('\n'), { textarea: true, rows: 4 });
+    const fFacts = field('Verified facts: action | scope | result | metric | source (one per line)',
+      (ctx.facts || []).filter(f => f.verified).map(f => [f.action, f.scope, f.result, f.metric, f.source].join(' | ')).join('\n'),
+      { textarea: true, rows: 3 });
     hidden.appendChild(fRealTech.wrap);
     hidden.appendChild(fRealAch.wrap);
+    hidden.appendChild(fFacts.wrap);
     block.appendChild(hidden);
 
     refs.experience.push({
+      originalCompany: exp.company,
       company: fCompany.input, title: fTitle.input, dates: fDates.input,
       location: fLoc.input, description: fDesc.input, technologies: fTech.input,
       real_technologies: fRealTech.input, real_achievements: fRealAch.input,
+      facts: fFacts.input,
     });
     expSection.appendChild(block);
   });
   cvEditor.appendChild(expSection);
+
+  const projectsSection = section('Projects');
+  const addProject = (project = {}) => {
+    const block = document.createElement('div');
+    block.className = 'editor-entry';
+    const fName = field('Project name', project.name);
+    const fUrl = field('URL', project.url);
+    const fDescription = field('Description', project.description, { textarea: true, rows: 3 });
+    const fTechnologies = field('Verified technologies (one per line)', (project.technologies || []).join('\n'), { textarea: true, rows: 2 });
+    [fName, fUrl, fDescription, fTechnologies].forEach(f => block.appendChild(f.wrap));
+    refs.projects.push({ name: fName.input, url: fUrl.input, description: fDescription.input, technologies: fTechnologies.input });
+    projectsSection.appendChild(block);
+  };
+  (cv.projects || []).forEach(addProject);
+  const addProjectBtn = document.createElement('button');
+  addProjectBtn.type = 'button';
+  addProjectBtn.className = 'btn-ghost';
+  addProjectBtn.textContent = '+ Add project';
+  addProjectBtn.addEventListener('click', () => addProject());
+  projectsSection.appendChild(addProjectBtn);
+  cvEditor.appendChild(projectsSection);
 
   // Education
   const eduSection = section('Education');
@@ -912,6 +1092,13 @@ async function saveCvStore(refs, saveBtn) {
       experience_context[company] = {
         real_technologies: linesToList(r.real_technologies.value),
         real_achievements: linesToList(r.real_achievements.value),
+        facts: [
+          ...((cvStore.experience_context || {})[r.originalCompany]?.facts || []).filter(fact => !fact.verified),
+          ...linesToList(r.facts.value).map(line => {
+          const [action = '', scope = '', result = '', metric = '', source = ''] = line.split('|').map(s => s.trim());
+          return { action, scope, result, metric, source, verified: true };
+          }).filter(fact => fact.action),
+        ],
       };
     }
     return {
@@ -961,7 +1148,10 @@ async function saveCvStore(refs, saveBtn) {
         dates: r.dates.value.trim(),
         details: r.details.value.trim(),
       })),
-      projects: cvStore.cv.projects || [],
+      projects: refs.projects.map(r => ({
+        name: r.name.value.trim(), url: r.url.value.trim(), description: r.description.value.trim(),
+        technologies: linesToList(r.technologies.value),
+      })),
       skills: selectedSkills,
       skill_categories,
       certifications: linesToList(refs.certifications.value),

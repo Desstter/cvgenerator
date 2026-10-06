@@ -13,7 +13,7 @@ REAL CONTEXT (verified evidence only):
 EVIDENCE POLICY:
 - Never substitute one technology for another, even when they are adjacent.
 - Use only technologies, metrics and achievements present in the CV or this context.
-- Keep the original skill inventory; relevance comes from ordering and truthful bullets.
+- Select only from the original skill inventory; relevance comes from truthful evidence.
 TONE: assert ("I built/led"), never aspire ("looking to/eager to"). Every claim must survive an interview.
 """
 
@@ -35,7 +35,7 @@ BPO PROFILE OVERRIDES (higher priority than generic adaptation rules):
 TASK 1 — ANALYZE the job description and return structured data.
 TASK 2 — ADAPT the CV to match the job description.
 
-Return a JSON object with exactly three keys: "job_analysis", "adapted_cv", and "keyword_equivalences".
+Return a JSON object with exactly two keys: "job_analysis" and "adapted_cv".
 
 JOB ANALYSIS fields (extract from the job description):
 - title: job title
@@ -51,29 +51,23 @@ JOB ANALYSIS fields (extract from the job description):
 - required_skills = ONLY explicit must-haves ("required", "imprescindible", "must have").
   Anything phrased as a plus/bonus/nice-to-have goes in preferred_skills.
 
-KEYWORD EQUIVALENCES (semantic enrichment for ATS scoring):
-- Map each job keyword (required/preferred/general) to other terms in the CV that mean the same thing
-  for this specific role, OR to terms the LLM knows are industry-equivalent.
-- Format: a LIST of objects: [{{"term": "canonical_job_term", "equivalents": ["equivalent1", ...]}}]
-- Examples: [{{"term": "React", "equivalents": ["ReactJS", "React.js"]}}, {{"term": "CI/CD pipelines", "equivalents": ["GitHub Actions", "Jenkins"]}}]
-- ONLY include equivalences a recruiter would accept as the same thing. Do NOT stretch (e.g. do NOT
-  map "Python" to "JavaScript"). When in doubt, leave it out — an empty list is valid.
-
 CV ADAPTATION RULES:
-- NEVER change: company names, job titles, dates, education, contact info, per-role technologies, or the skill inventory
-- SUMMARY ALIGNMENT: the summary's first sentence must present the candidate as the job's
-  target role (use the job title's role wording naturally) + years + core stack.
+- NEVER change: company names, job titles, dates, education, contact info, per-role technologies, or the verified master skill inventory
+- SUMMARY ALIGNMENT: present the verified professional identity and strongest relevant
+  evidence. Use the target role wording only when the candidate's history supports it.
 - REWRITE: summary and experience descriptions following the BULLET QUALITY RULES and
   LENGTH AND STRUCTURE RULES from your instructions (formula, forbidden openers, quantification,
   bullet counts per role). These rules are the core of the task — a technically correct but
   generic rewrite is a failure.
 - PRESERVE: every original job title and technology list exactly
-- REORDER: verified skills with most relevant first; do not add or remove skills
+- SELECT: show only the most relevant verified skills (usually 10-18), with the
+  strongest matches first. The source inventory is retained separately; never invent skills.
 - CATEGORIZE: group the skills into 3-5 named categories in "skill_categories" (e.g. Languages,
   Frameworks, Cloud & Infrastructure, Databases & Tools). Category names in the job's language.
-  Every skill in "skills" must appear in exactly one category.
-- LANGUAGE: Write the entire adapted CV in the SAME language as the job description
-- ANTI-STUFFING: never reuse the same job-description phrase across more than one bullet; do not prepend the job's headline term to every bullet ("AI-driven X, AI-driven Y..."); one truthful, in-context mention of a keyword scores the same with an ATS as five — prefer it. If a keyword can't be placed truthfully, leave it out.
+  Every displayed skill in "skills" must appear in exactly one category.
+- LANGUAGE: Write mutable prose and skill category labels in the job's language.
+  Employer names, original role titles, credentials and contact details remain literal.
+- ANTI-STUFFING: never reuse the same job-description phrase across more than one bullet; do not prepend the job's headline term to every bullet ("AI-driven X, AI-driven Y..."); prefer one truthful mention in context. If a keyword can't be placed truthfully, leave it out.
 {context_block}
 {profile_rules}
 DATA TYPE REQUIREMENTS (critical):
@@ -98,6 +92,8 @@ def refine_cv_prompt(
     job_skills: list[str],
     language: str,
     profile_type: str = "developer",
+    source_cv_json: str = "",
+    real_context: str = "",
 ) -> str:
     """Second-pass critique: review the adapted CV as a senior recruiter and fix the weakest parts."""
     lang_note = "The CV must stay in Spanish." if language == "es" else "The CV must stay in English."
@@ -122,13 +118,15 @@ REVIEW PASS — find and FIX these problems:
    equivalents). Rewrite every occurrence.
 3. VAGUE CLAIMS: "improved performance", "various technologies", "multiple projects" — replace
    with the specific system/number already present elsewhere in the CV, or cut the claim.
-   NEVER invent new facts, numbers, employers, or technologies that are not already in the CV.
+   NEVER invent new facts, numbers, employers, or technologies that are not in the
+   verified source CV or its role-specific evidence below.
    KEYWORD GUARD: before cutting or rewriting a bullet, check if it contains a technology or
    requirement from the job ({skills_str}) that appears NOWHERE else in the CV descriptions.
    If so, keep that term in the rewritten text — rephrase around it, never drop it.
 4. REDUNDANCY: two bullets saying the same thing → merge into the stronger one.
 5. SUMMARY: if it exceeds 3 sentences or contains filler ("passionate", "results-driven",
-   "motivated"), tighten it. First sentence = role + years + core stack.
+   "motivated"), tighten it. First sentence = verified role and core strengths;
+   mention years only if the source states them.
 6. BURIED LEDE: within each role, the bullet most relevant to "{job_title}" must come first.
 {bpo_guard}
 
@@ -150,7 +148,13 @@ Return ONLY valid JSON with exactly this structure:
 "experience" and "projects" must have the SAME length and order as the input CV.
 
 CV to review:
-{adapted_cv_json}"""
+{adapted_cv_json}
+
+Verified source CV:
+{source_cv_json}
+
+Verified role-specific evidence:
+{real_context}"""
 
 
 def job_analysis_prompt(job_text: str) -> str:
@@ -193,7 +197,7 @@ IMPORTANT RULES:
 - LANGUAGE: Output the CV in the SAME language as the job description
 - Start bullet points with action verbs
 - Integrate the job's keywords naturally into real accomplishments — never as decoration
-- ANTI-STUFFING: never reuse the same phrase across more than one bullet; do not prepend the job's headline term to every bullet; one truthful mention scores the same with an ATS as five. If a keyword can't be placed truthfully, leave it out.
+- ANTI-STUFFING: never reuse the same phrase across more than one bullet; do not prepend the job's headline term to every bullet; prefer one truthful mention in context. If a keyword can't be placed truthfully, leave it out.
 - Preserve original job titles exactly
 - Quantify achievements where possible
 {context_block}

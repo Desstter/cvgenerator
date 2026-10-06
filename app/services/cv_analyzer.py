@@ -400,3 +400,17 @@ def validate_cv_data(cv: CVData) -> list[str]:
             logger.warning(f"  - {warning}")
 
     return warnings
+
+
+def critical_cv_errors(cv: CVData) -> list[str]:
+    """Fields whose absence makes factual adaptation unreliable."""
+    errors = []
+    if not cv.contact.name.strip():
+        errors.append("Candidate name is missing")
+    if not cv.experience:
+        errors.append("Professional experience is missing")
+    for index, entry in enumerate(cv.experience, start=1):
+        for label, value in (("company", entry.company), ("title", entry.title), ("dates", entry.dates)):
+            if not value.strip():
+                errors.append(f"Experience {index}: {label} is missing")
+    return errors

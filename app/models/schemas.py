@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -57,10 +59,20 @@ class CVData(BaseModel):
     detected_language: str = "en"
 
 
+class EvidenceFact(BaseModel):
+    action: str = ""
+    scope: str = ""
+    result: str = ""
+    metric: str = ""
+    source: str = ""
+    verified: bool = False
+
+
 class ExperienceContextEntry(BaseModel):
     """Verified per-company evidence sent to the AI, never shown verbatim in the final CV."""
     real_technologies: list[str] = Field(default_factory=list)
     real_achievements: list[str] = Field(default_factory=list)
+    facts: list[EvidenceFact] = Field(default_factory=list)
 
 
 class BaseCVStore(BaseModel):
@@ -106,6 +118,7 @@ class ClaimReview(BaseModel):
     protected_fields_preserved: bool = True
     transferable_strengths: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    review_items: list[dict[str, str]] = Field(default_factory=list)
 
 
 class JobDescription(BaseModel):
@@ -125,6 +138,7 @@ class ATSScore(BaseModel):
     preferred_score: float = 0.0
     general_score: float = 0.0
     matched_keywords: list[str] = Field(default_factory=list)
+    matched_evidence: dict[str, str] = Field(default_factory=dict)
     missing_keywords: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
 
@@ -139,3 +153,15 @@ class AdaptationResult(BaseModel):
     job_analysis: dict = Field(default_factory=dict)
     profile_id: str = "developer"
     claim_review: ClaimReview = Field(default_factory=ClaimReview)
+    record_id: str = ""
+    quality_issues: list[str] = Field(default_factory=list)
+    evidence_questions: list[str] = Field(default_factory=list)
+
+
+class ClaimConfirmation(BaseModel):
+    fields: list[str] = Field(default_factory=list)
+
+
+class ApplicationFeedback(BaseModel):
+    outcome: Literal["draft", "applied", "interview", "offer", "rejected"] = "draft"
+    notes: str = ""
