@@ -77,6 +77,32 @@ def test_pdf_readback_rejects_missing_content(tmp_path: Path):
         verify_pdf_content(path, cv, "technical", 1)
 
 
+def test_pdf_readback_preserves_wrapped_degree_with_positioned_dates(tmp_path, monkeypatch):
+    from app.models.schemas import EducationEntry
+    from app.services import pdf_generator
+
+    monkeypatch.setattr(pdf_generator.settings, "outputs_dir", tmp_path)
+    cv = CVData(contact=ContactInfo(name="Ana Example", email="ana@example.com"),
+                education=[EducationEntry(institution="Example Institute",
+                                          degree="Técnico en Programación de Software",
+                                          dates="Sep 2017 - Ene 2020")], detected_language="en")
+    path = pdf_generator.generate_pdf_from_template(cv, template_name="modern")
+    verify_pdf_content(path, cv, "modern")
+
+
+def test_pdf_failure_is_not_misreported_as_ai_rate_limit(monkeypatch):
+    from app import main
+
+    def broken_provider(*args, **kwargs):
+        raise ValueError("Generated PDF lost or changed content")
+
+    monkeypatch.setattr(main, "get_provider", broken_provider)
+    client = TestClient(app)
+    response = client.post("/api/adapt", data={"job_description": "Python developer"})
+    assert response.status_code == 500
+    assert "rate limit" not in str(response.json()).lower()
+
+
 def test_compaction_preserves_the_required_skill_bullet():
     cv = CVData(experience=[ExperienceEntry(
         company="A", title="Developer",

@@ -209,12 +209,16 @@ def verify_pdf_content(path: Path, cv: CVData, template_name: str, max_pages: in
                 "Shorten the generated content and try again."
             )
         extracted = " ".join(page.get_text(sort=True) for page in document)
+        # Positioned dates can interrupt wrapped titles in geometric reading order.
+        # Keep the renderer's text order as a second complete readback, rather than
+        # dropping the requirement to verify the whole field.
+        rendered_order = " ".join(page.get_text(sort=False) for page in document)
 
     def compact(value: str) -> str:
         ascii_text = unicodedata.normalize("NFKD", value).casefold()
         return "".join(char for char in ascii_text if char.isalnum())
 
-    actual = compact(extracted)
+    actual = [compact(extracted), compact(rendered_order)]
     expected = [cv.contact.name, cv.contact.email, cv.contact.phone,
                 cv.contact.location, cv.headline, cv.summary, *cv.skills, *cv.languages]
     for entry in cv.education:
@@ -227,7 +231,7 @@ def verify_pdf_content(path: Path, cv: CVData, template_name: str, max_pages: in
         for project in cv.projects:
             expected.extend([project.name, project.description])
         expected.extend(cv.certifications)
-    missing = [part for part in expected if part and compact(part) not in actual]
+    missing = [part for part in expected if part and not any(compact(part) in text for text in actual)]
     if missing:
         raise ValueError(
             "Generated PDF lost or changed content: "

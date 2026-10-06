@@ -3,6 +3,7 @@ import os
 os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 
 import shutil
+import re
 import time
 import traceback
 import uuid
@@ -359,7 +360,7 @@ def adapt_cv_endpoint(
     except Exception as e:
         detail = _error_detail(e, "pipeline")
         err_msg = str(e).lower()
-        if "quota" in err_msg or "rate" in err_msg or "429" in err_msg:
+        if re.search(r"\b(?:quota|429)\b|\brate[\s_-]*limit", err_msg):
             detail["message"] = (
                 "AI provider rate limit exceeded. Wait a minute and try again, "
                 f"or switch provider. ({detail['message']})"
