@@ -34,7 +34,11 @@ Emite un `job_assessment.json` junto al snapshot, con este contenido:
 }
 ```
 
-La nota es una rúbrica orientativa del agente y debe justificarse con la oferta y el perfil; no es una probabilidad de conseguir entrevista. No elimines una condición excluyente por sumar puntos en otros aspectos. Usa el umbral configurado para priorizar. Puedes proponer una candidatura con brechas no excluyentes explicándolas.
+La nota es una rúbrica orientativa del agente y debe justificarse con la oferta y el perfil; no es una probabilidad de conseguir entrevista. Separa los requisitos por función: condiciones de elegibilidad (país, autorización, horario o contrato), capacidades centrales del trabajo y herramientas concretas. Marca un `hard_block` solo ante una condición de elegibilidad que falla o una competencia que la oferta declara expresamente imprescindible y que el candidato no demuestra. Una tecnología enumerada como ejemplo, preferida o aprendible no es por sí sola un bloqueo.
+
+Evalúa el trabajo que la persona ya sabe hacer y su experiencia transferible antes de penalizar una herramienta desconocida. Por ejemplo, la falta de un lenguaje concreto no descarta automáticamente a quien domina otro lenguaje pertinente; la falta de un constructor visual no invalida experiencia real construyendo y manteniendo sitios WordPress; y la experiencia con herramientas de marketing relacionadas puede respaldar una candidatura sin afirmar que conoce todo el stack. Registra la brecha con precisión, pero no conviertas un requisito deseable o una herramienta sustituible en un rechazo automático. Solo presenta como dominio las herramientas verificadas; no inventes experiencia para mejorar el encaje.
+
+Usa el umbral configurado para priorizar, explicando qué responsabilidades sí cubre la experiencia demostrada y qué requisitos específicos quedan por aprender o verificar. Puedes proponer candidaturas con brechas no excluyentes. No elimines una condición de elegibilidad verdaderamente excluyente por sumar puntos en otros aspectos.
 
 ## Salario y costos
 

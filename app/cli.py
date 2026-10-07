@@ -206,6 +206,7 @@ def track_application(root, args):
     if entry and entry["state"] in {"submitting", "uncertain"} and args.state not in {"submitted", "uncertain", "failed"}:
         raise ValueError("Submission status is uncertain: inspect the portal before retrying")
     previous = entry["state"] if entry else None
+    external_resume = (args.external_resume or (entry or {}).get("external_resume", "")).strip()
     allowed = {
         None: {"discovered", "skipped"},
         "discovered": {"discovered", "shortlisted", "skipped", "awaiting_user", "failed"},
@@ -221,17 +222,25 @@ def track_application(root, args):
     if args.state not in allowed.get(previous, set()):
         raise ValueError(f"Invalid transition: {previous} -> {args.state}")
     record_id = args.record or (entry or {}).get("record_id", "")
-    if previous in {"submitting", "uncertain"} and record_id != entry.get("record_id"):
+    if previous in {"submitting", "uncertain"} and (
+        record_id != entry.get("record_id") or external_resume != entry.get("external_resume", "")
+    ):
         raise ValueError("Do not change the CV version while reconciling a submission")
     if args.state in {"cv_ready", "prepared", "submitting", "submitted"}:
-        if not record_id:
+        if external_resume:
+            if record_id:
+                raise ValueError("Choose either a reviewed generator CV or a LinkedIn-saved resume")
+            if len(external_resume) > 240 or any(char in external_resume for char in "\\/\r\n"):
+                raise ValueError("External resume must be a short LinkedIn profile filename")
+        elif not record_id:
             raise ValueError("This state requires --record for the reviewed CV version")
-        record = record_for(record_id, args.profile)
-        report = inspect_record(root, record)
-        if not record["reviewed"] or record["snapshot"]["claim_review"]["status"] == "blocked" or not report["quality"]["pdf_valid"]:
-            raise ValueError("CV must pass factual review and PDF validation first")
-        if record["snapshot"]["job_description"].strip() != job["description"].strip():
-            raise ValueError("CV was generated for a different job description")
+        else:
+            record = record_for(record_id, args.profile)
+            report = inspect_record(root, record)
+            if not record["reviewed"] or record["snapshot"]["claim_review"]["status"] == "blocked" or not report["quality"]["pdf_valid"]:
+                raise ValueError("CV must pass factual review and PDF validation first")
+            if record["snapshot"]["job_description"].strip() != job["description"].strip():
+                raise ValueError("CV was generated for a different job description")
     evidence = read_json(args.evidence) if args.evidence else None
     if args.state == "submitted":
         if not evidence or not all(isinstance(evidence.get(field), str) and evidence[field].strip()
@@ -244,11 +253,13 @@ def track_application(root, args):
     if args.state == "failed" and previous in {"submitting", "uncertain"}:
         if not evidence or not evidence.get("not_submitted_verified") or not evidence.get("confirmation_text"):
             raise ValueError("Before retrying, supply evidence that the portal did not receive the application")
-    event = {"state": args.state, "at": now(), "note": args.note, "record_id": record_id, "evidence": evidence}
+    event = {"state": args.state, "at": now(), "note": args.note, "record_id": record_id,
+             "external_resume": external_resume, "evidence": evidence}
     if entry is None:
         entry = {"key": key, "profile_id": args.profile, "canonical_url": url, "job": job, "events": []}
         ledger.append(entry)
-    entry.update({"state": args.state, "record_id": record_id, "updated_at": event["at"]})
+    entry.update({"state": args.state, "record_id": record_id, "external_resume": external_resume,
+                  "updated_at": event["at"]})
     entry["events"].append(event)
     write_json(path, ledger)
     return entry
@@ -287,6 +298,7 @@ def parser():
     track.add_argument("--job", required=True, type=Path, help="JSON job snapshot")
     track.add_argument("--state", required=True, choices=STATES)
     track.add_argument("--record", default="")
+    track.add_argument("--external-resume", default="", help="Filename already saved in LinkedIn; records its source without claiming generator review")
     track.add_argument("--note", default="")
     track.add_argument("--evidence", type=Path)
     return cli
