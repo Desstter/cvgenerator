@@ -78,6 +78,13 @@ def _contains_term(text: str, term: str) -> bool:
     return bool(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", text, re.I))
 
 
+def _contains_technology(text: str, term: str) -> bool:
+    """Match common singular/plural wording without weakening tool checks."""
+    if term == "rest api":
+        return bool(re.search(r"(?<!\w)rest apis?(?!\w)", text, re.I))
+    return _contains_term(text, term)
+
+
 def _context_for_company(real_context: str, company: str) -> str:
     marker = f"--- {company} ---"
     if marker not in real_context:
@@ -134,7 +141,7 @@ def _review_mutable_claims(original: CVData, adapted: CVData, real_context: str)
         for number in _numbers(text) - _numbers(source) - supported_years:
             unsupported.append(f"{path}: unsupported number or metric {number}")
         for term in KNOWN_TECH_TERMS:
-            if _contains_term(text, term) and not _contains_term(source, term):
+            if _contains_technology(text, term) and not _contains_technology(source, term):
                 unsupported.append(f"{path}: unsupported technology or tool {term}")
         if text.strip() and text.strip() not in previous:
             review_items.append({
@@ -346,7 +353,7 @@ def review_developer_claims(original: CVData, adapted: CVData, real_context: str
     unsupported.extend(
         f"Unsupported technology or tool: {term}"
         for term in KNOWN_TECH_TERMS
-        if _contains_term(target_text, term) and not _contains_term(source_text, term)
+        if _contains_technology(target_text, term) and not _contains_technology(source_text, term)
     )
     protected = (
         adapted.contact == original.contact
