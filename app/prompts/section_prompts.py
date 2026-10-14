@@ -62,6 +62,9 @@ CV ADAPTATION RULES:
 - EMPLOYER ATTRIBUTION: use only achievements stated for that exact employer in the CV or
   its role-specific context. Do not move independent or GitHub projects into an employer's
   bullets based solely on matching technologies or job keywords.
+- A generic AI integration at an employer does not establish use of LLMs, RAG, embeddings,
+  agents, or a named model there. Keep the generic wording unless that employer's evidence
+  explicitly identifies the specific technology.
 - PRESERVE: every original job title and technology list exactly
 - SELECT: show only the most relevant verified skills (usually 10-18), with the
   strongest matches first. The source inventory is retained separately; never invent skills.
@@ -133,6 +136,8 @@ REVIEW PASS — find and FIX these problems:
 6. BURIED LEDE: within each role, the bullet most relevant to "{job_title}" must come first.
    Preserve employer attribution: a personal project belongs in a role only when the
    verified source CV or that employer's context explicitly connects it to the employer.
+   Do not turn a generic AI integration into an LLM, RAG, embeddings, agent, or named-model
+   claim without explicit evidence for that employer.
 {bpo_guard}
 
 {lang_note}
