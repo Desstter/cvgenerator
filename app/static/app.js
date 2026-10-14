@@ -1159,6 +1159,7 @@ async function saveCvStore(refs, saveBtn) {
       detected_language: cvStore.cv.detected_language || 'es',
     },
     experience_context,
+    excluded_projects: cvStore.excluded_projects || [],
   };
 
   saveBtn.disabled = true;

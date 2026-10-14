@@ -82,6 +82,8 @@ class BaseCVStore(BaseModel):
     profile_type: str = "developer"
     cv: CVData = Field(default_factory=CVData)
     experience_context: dict[str, ExperienceContextEntry] = Field(default_factory=dict)
+    # Names or URLs of work kept in the profile but never shown on a CV.
+    excluded_projects: list[str] = Field(default_factory=list)
 
 
 class ProfileDefinition(BaseModel):

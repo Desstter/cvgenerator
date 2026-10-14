@@ -32,5 +32,6 @@
     "languages": ["Spanish Native"],
     "detected_language": "en"
   },
-  "experience_context": {}
+  "experience_context": {},
+  "excluded_projects": []
 }

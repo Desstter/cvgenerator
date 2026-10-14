@@ -34,7 +34,7 @@ Emite un `job_assessment.json` junto al snapshot, con este contenido:
 }
 ```
 
-La nota es una rúbrica orientativa del agente y debe justificarse con la oferta y el perfil; no es una probabilidad de conseguir entrevista. Separa los requisitos por función: condiciones de elegibilidad (país, autorización, horario o contrato), capacidades centrales del trabajo y herramientas concretas. Marca un `hard_block` solo ante una condición de elegibilidad que falla o una competencia que la oferta declara expresamente imprescindible y que el candidato no demuestra. Una tecnología enumerada como ejemplo, preferida o aprendible no es por sí sola un bloqueo.
+La nota es una rúbrica orientativa del agente y debe justificarse con la oferta y el perfil; no es una probabilidad de conseguir entrevista. Separa los requisitos por función: condiciones de elegibilidad (país, autorización, horario o contrato), capacidades centrales del trabajo y herramientas concretas. Marca un `hard_block` solo ante una condición real de elegibilidad que falla, una licencia/credencial exigida legalmente para ejercer la función, o una capacidad central que el candidato no puede desempeñar. **La falta de un título universitario/profesional en Ingeniería o carrera afín casi nunca es por sí sola un bloqueo para este candidato, incluso cuando la oferta lo llame “indispensable”: si el trabajo encaja, sigue y permite que el empleador valore la equivalencia.** Nunca falsifiques un título; declara su formación técnica real y contesta con veracidad los filtros de formación. Si una respuesta veraz impide técnicamente el envío, registra ese impedimento concreto. Una tecnología enumerada como ejemplo, preferida o aprendible no es por sí sola un bloqueo.
 
 Evalúa el trabajo que la persona ya sabe hacer y su experiencia transferible antes de penalizar una herramienta desconocida. Por ejemplo, la falta de un lenguaje concreto no descarta automáticamente a quien domina otro lenguaje pertinente; la falta de un constructor visual no invalida experiencia real construyendo y manteniendo sitios WordPress; y la experiencia con herramientas de marketing relacionadas puede respaldar una candidatura sin afirmar que conoce todo el stack. Registra la brecha con precisión, pero no conviertas un requisito deseable o una herramienta sustituible en un rechazo automático. Solo presenta como dominio las herramientas verificadas; no inventes experiencia para mejorar el encaje.
 
@@ -47,6 +47,8 @@ Distingue salario publicado, expectativa del candidato y estimación de mercado.
 Registra como costos del proceso el proveedor/modelo, si hubo refinamiento y el número de generaciones. No anuncies un costo exacto de API sin datos reales de uso y tarifas verificadas. Los portales que pidan pagar se detienen para decisión del usuario; no efectúes pagos por la autorización de postularse.
 
 ## Evaluación del CV
+
+Comprueba la atribución de cada logro al empleador concreto. No conviertas un proyecto personal en experiencia de una empresa por similitud de tecnologías. Si el candidato confirma el vínculo, registra el hecho y su fuente en `experience_context` de esa empresa antes de generar. `excluded_projects` elimina del CV los proyectos indicados por nombre o URL; los CV históricos que todavía los mencionen deben revisarse antes de volver a usarse.
 
 Crea `cv_assessment_<record_id>.json` después de `inspect` y actualízalo para la versión revisada. Incluye record_id, huella del registro, motivos, acciones de mejora y:
 

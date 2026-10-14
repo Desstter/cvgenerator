@@ -10,7 +10,8 @@ from app.main import app
 from app.models.schemas import (BaseCVStore, CVData, ContactInfo, EvidenceFact,
                                 ExperienceContextEntry, ExperienceEntry, JobDescription, ProjectEntry)
 from app.services.claim_guard import review_claims, sanitize_adaptation
-from app.services.base_cv_store import build_real_context
+from app.services.base_cv_store import (build_real_context, cv_for_generation,
+                                        excluded_cv_mentions, excluded_projects_in_cv)
 from app.services.cv_compactor import compact_one_bullet
 from app.services.cv_quality import editorial_issues, evidence_questions
 from app.services.pdf_generator import verify_pdf_content
@@ -51,6 +52,100 @@ def test_only_verified_structured_facts_enter_model_context():
     context = build_real_context(store)
     assert "Built an API" in context
     assert "Unconfirmed project" not in context
+
+
+def test_excluded_project_is_removed_without_changing_the_master_profile():
+    store = BaseCVStore(
+        cv=CVData(projects=[
+            ProjectEntry(name="Relevant client system", url="https://example.com/system"),
+            ProjectEntry(name="CV Generator", url="https://example.com/cvgenerator"),
+        ]),
+        excluded_projects=["CV Generator", "https://example.com/cvgenerator"],
+    )
+    prepared = cv_for_generation(store)
+    assert [project.name for project in prepared.projects] == ["Relevant client system"]
+    assert len(store.cv.projects) == 2
+    assert excluded_projects_in_cv(store, store.cv) == ["CV Generator"]
+    assert not excluded_cv_mentions(store, prepared)
+    prepared.summary = "Built a CV Generator."
+    assert excluded_cv_mentions(store, prepared) == ["CV Generator"]
+
+
+def test_generation_never_sends_or_renders_excluded_project(tmp_path, monkeypatch):
+    from app import main
+    from app.services import history
+    from app.models.schemas import EducationEntry
+
+    store = BaseCVStore(
+        cv=CVData(
+            contact=ContactInfo(name="Ana Example", email="ana@example.com"),
+            summary="Built Python APIs for clients.",
+            experience=[ExperienceEntry(company="Acme", title="Developer", dates="2022 - 2025",
+                                        description="Built Python APIs for clients.", technologies=["Python"])],
+            education=[EducationEntry(institution="Example Institute", degree="Software Technology")],
+            skills=["Python"],
+            projects=[ProjectEntry(name="CV Generator", description="Private CV tool")],
+        ),
+        excluded_projects=["CV Generator"],
+    )
+    seen = []
+
+    def adapt(provider, cv, job_text, **kwargs):
+        seen.extend(project.name for project in cv.projects)
+        return JobDescription(raw_text=job_text, title="Python Developer",
+                              required_skills=["Python"], detected_language="en"), cv.model_copy(deep=True)
+
+    monkeypatch.setattr(main, "load_base_cv", lambda profile_id="developer": store)
+    monkeypatch.setattr(main, "get_provider", lambda name=None: type("Provider", (), {"model": "offline"})())
+    monkeypatch.setattr(main, "analyze_and_adapt", adapt)
+    monkeypatch.setattr(main.settings, "refine_pass", False)
+    monkeypatch.setattr(main.settings, "outputs_dir", tmp_path / "generated")
+    monkeypatch.setattr(main.settings, "saved_dir", tmp_path / "saved")
+    (tmp_path / "generated").mkdir()
+    (tmp_path / "saved").mkdir()
+    monkeypatch.setattr(history, "HISTORY_FILE", tmp_path / "history.json")
+    result = TestClient(app).post("/api/adapt", data={"job_description": "Python developer"})
+    assert result.status_code == 200, result.text
+    assert not seen
+    assert result.json()["adapted_cv"]["projects"] == []
+    with fitz.open(tmp_path / "saved" / result.json()["pdf_filename"]) as pdf:
+        assert "CV Generator" not in "".join(page.get_text() for page in pdf)
+
+
+def test_old_cv_with_excluded_project_cannot_be_downloaded(tmp_path, monkeypatch):
+    from app import main
+
+    store = BaseCVStore(excluded_projects=["CV Generator"])
+    monkeypatch.setattr(main, "load_base_cv", lambda profile_id="developer": store)
+    monkeypatch.setattr(main, "load_history", lambda: [{
+        "pdf_filename": "old.pdf", "reviewed": True, "profile_id": "developer",
+        "snapshot": {"adapted_cv": CVData(projects=[ProjectEntry(name="CV Generator")]).model_dump()},
+    }])
+    monkeypatch.setattr(main.settings, "outputs_dir", tmp_path)
+    monkeypatch.setattr(main.settings, "saved_dir", tmp_path)
+    (tmp_path / "old.pdf").write_bytes(b"old")
+    response = TestClient(app).get("/api/download/old.pdf")
+    assert response.status_code == 409
+    assert "excluded" in response.json()["detail"]
+
+
+def test_ai_and_mobile_claims_need_evidence_for_the_specific_employer():
+    source = CVData(
+        summary="Developer with AI integration experience.",
+        experience=[ExperienceEntry(company="Acme", title="Developer", description="Built web APIs.")],
+    )
+    adapted = source.model_copy(deep=True)
+    adapted.experience[0].description = "Integrated AI into a mobile app."
+    assert review_claims(source, adapted).status == "blocked"
+    context = "--- Acme ---\n  - Integrated AI into a mobile app."
+    supported = review_claims(source, adapted, context)
+    assert supported.status == "needs_review"
+    assert not supported.unsupported_claims
+    spanish_source = source.model_copy(deep=True)
+    spanish_source.experience[0].description = "Integré IA en aplicaciones móviles."
+    translated = review_claims(spanish_source, adapted)
+    assert translated.status == "needs_review"
+    assert not translated.unsupported_claims
 
 
 def test_project_rewrite_requires_review_and_preserves_technology():

@@ -23,6 +23,8 @@ You will receive "real_context" with the candidate's ACTUAL technologies and ach
 - Never add a job keyword to skills, titles or bullets unless verified evidence supports it.
 - A lower honest ATS score is preferable to an interview claim the candidate cannot defend.
 - Do not retrofit recent practices onto older roles; all work must be plausible for its dates.
+- Attribute an accomplishment to an employer only when the source description or that employer's real_context supports it. A personal GitHub repository or a skill in the summary does not establish which company the work was done for.
+- Prefer concrete verified work under Professional Experience. Keep independent work in Projects unless a verified employment or client relationship connects it to a role.
 
 VERIFIED DIFFERENTIATORS (critical):
 - When the candidate genuinely has BOTH a real differentiator and the job's preferred tech (e.g. has OCI and AWS, job wants AWS):

@@ -59,6 +59,9 @@ CV ADAPTATION RULES:
   LENGTH AND STRUCTURE RULES from your instructions (formula, forbidden openers, quantification,
   bullet counts per role). These rules are the core of the task — a technically correct but
   generic rewrite is a failure.
+- EMPLOYER ATTRIBUTION: use only achievements stated for that exact employer in the CV or
+  its role-specific context. Do not move independent or GitHub projects into an employer's
+  bullets based solely on matching technologies or job keywords.
 - PRESERVE: every original job title and technology list exactly
 - SELECT: show only the most relevant verified skills (usually 10-18), with the
   strongest matches first. The source inventory is retained separately; never invent skills.
@@ -128,6 +131,8 @@ REVIEW PASS — find and FIX these problems:
    "motivated"), tighten it. First sentence = verified role and core strengths;
    mention years only if the source states them.
 6. BURIED LEDE: within each role, the bullet most relevant to "{job_title}" must come first.
+   Preserve employer attribution: a personal project belongs in a role only when the
+   verified source CV or that employer's context explicitly connects it to the employer.
 {bpo_guard}
 
 {lang_note}

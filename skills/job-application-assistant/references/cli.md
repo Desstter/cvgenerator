@@ -43,6 +43,8 @@ python -m app.cli --workspace RUTA --profile developer --json-out RESULTADO.json
 
 `candidate.json` es un `BaseCVStore`; `edited_cv.json` es solamente el objeto `CVData`, sin envoltorio `cv`. El idioma del CV se determina por la oferta en el generador. La plantilla BPO mantiene sus restricciones de una página. No cambies código para silenciar el guardián de afirmaciones.
 
+Para ocultar definitivamente un proyecto en este perfil, agrega su nombre o URL a `excluded_projects` en `candidate.json` y actualiza el perfil con `profile-update`. El generador lo excluye de los prompts y del PDF; las versiones históricas que lo mencionen se bloquean para descarga o uso hasta crear una revisión corregida.
+
 ## Ejemplo completo
 
 Los siguientes valores son rutas de ejemplo. Sustitúyelos por la configuración de campaña; en PowerShell:

@@ -23,6 +23,10 @@ Cada persona usa un workspace explícito. Mantén revisión de afirmaciones, ver
 validación del PDF, registro de estados y protección contra envíos duplicados.
 Las interfaces API/CLI deben continuar usando el mismo flujo de generación y revisión.
 
+## Evaluación de vacantes: formación en ingeniería
+
+No descartes ni marques como `hard_block` una vacante solo porque solicita un título profesional/universitario en Ingeniería de Sistemas, Software, Informática o carrera afín. Para el candidato de esta campaña, ese requisito casi nunca es decisivo: si las responsabilidades y la experiencia demostrada tienen un encaje razonable, continúa y permite que el empleador evalúe la equivalencia, incluso cuando el anuncio lo describa como indispensable. Conserva y declara la formación verificada (Técnico en Programación de Software/SENA); nunca conviertas ese título en una ingeniería ni respondas falsamente un filtro. Solo detén el envío por formación si la ley exige una licencia/credencial específica para ejercer las funciones o si el portal no permite presentar una respuesta veraz.
+
 La skill fuente está en `skills/job-application-assistant/`. Después de cambiarla,
 actualiza su copia instalada cuando exista y regenera el manual y ZIP con
 `python scripts/package_application_assistant.py --out RUTA_DE_ENTREGA`.

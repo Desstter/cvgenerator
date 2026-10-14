@@ -29,6 +29,9 @@ from app.services.base_cv_store import (
     load_base_cv,
     save_base_cv,
     build_real_context,
+    cv_for_generation,
+    excluded_cv_mentions,
+    excluded_projects_in_cv,
     get_profile_definition,
     list_profile_definitions,
 )
@@ -196,6 +199,10 @@ def adapt_cv_endpoint(
             real_context = build_real_context(store)
             provider = get_provider(provider_name or None)
 
+        cv = cv_for_generation(store, cv)
+        if excluded_cv_mentions(store, cv):
+            raise ValueError("The source CV still mentions work excluded by this candidate's profile")
+
         # Analyze job and adapt CV in a single API call
         with Timer("ai", "Analyzing job & adapting CV (AI pass 1/2)"):
             job, adapted_cv = analyze_and_adapt(
@@ -225,6 +232,8 @@ def adapt_cv_endpoint(
             log_event("ai", "Refine pass disabled in config — skipping AI pass 2/2")
 
         adapted_cv = sanitize_adaptation(cv, adapted_cv, profile_type=profile_type)
+        if excluded_cv_mentions(store, adapted_cv):
+            raise ValueError("The generated CV mentions work excluded by this candidate's profile")
         claim_review = review_claims(cv, adapted_cv, real_context, profile_type=profile_type)
         if claim_review.status == "blocked":
             raise ValueError(
@@ -386,7 +395,10 @@ async def get_opportunities(profile: str = ""):
 def base_cv_pdf(profile: str = "developer", template: str = ""):
     """Generate and download the base CV with real technologies, no adaptation."""
     definition = _profile_or_400(profile)
-    cv = load_base_cv(profile).cv
+    store = load_base_cv(profile)
+    cv = cv_for_generation(store)
+    if excluded_cv_mentions(store, cv):
+        raise HTTPException(422, "The base CV still mentions work excluded by this candidate's profile")
     selected_template = definition.default_template if definition.one_page_required else (template or definition.default_template)
     title = "Bilingual_Customer_Service" if definition.profile_type == "bpo" else ""
     output_path = generate_pdf_from_template(
@@ -436,6 +448,11 @@ async def download_pdf(filename: str):
     record = next((item for item in load_history() if item.get("pdf_filename") == safe_name), None)
     if record and not record.get("reviewed", True):
         raise HTTPException(409, "Review and confirm the generated claims before downloading")
+    if record:
+        store = load_base_cv(record["profile_id"])
+        cv = CVData.model_validate(record.get("snapshot", {}).get("adapted_cv", {}))
+        if excluded_projects_in_cv(store, cv) or excluded_cv_mentions(store, cv):
+            raise HTTPException(409, "This CV mentions work excluded by the current profile; revise it before downloading")
     return FileResponse(
         str(file_path),
         media_type="application/pdf",
@@ -486,7 +503,11 @@ def revise_history_entry(record_id: str, edited_cv: CVData):
     if not record or not record.get("snapshot"):
         raise HTTPException(404, "Editable application snapshot not found")
     snapshot = record["snapshot"]
-    source = CVData.model_validate(snapshot["source_cv"])
+    store = load_base_cv(record["profile_id"])
+    source = cv_for_generation(store, CVData.model_validate(snapshot["source_cv"]))
+    edited_cv = cv_for_generation(store, edited_cv)
+    if excluded_cv_mentions(store, edited_cv):
+        raise HTTPException(422, "Edited CV mentions work excluded by the current profile")
     verified_skills = {skill.casefold() for skill in source.skills}
     unknown_skills = [skill for skill in edited_cv.skills if skill.casefold() not in verified_skills]
     if unknown_skills:
@@ -494,6 +515,8 @@ def revise_history_entry(record_id: str, edited_cv: CVData):
     job = JobDescription.model_validate(snapshot["job_analysis"])
     profile = _profile_or_400(record["profile_id"])
     adapted = sanitize_adaptation(source, edited_cv, profile.profile_type)
+    if excluded_cv_mentions(store, adapted):
+        raise HTTPException(422, "Edited CV mentions work excluded by the current profile")
     review = review_claims(source, adapted, snapshot.get("real_context", ""), profile.profile_type)
     if review.status == "blocked":
         raise HTTPException(422, {"message": "Edited CV contains unsupported claims", "review": review.model_dump()})
@@ -514,6 +537,7 @@ def revise_history_entry(record_id: str, edited_cv: CVData):
         shutil.copy2(output, saved_pdf)
     updated_snapshot = dict(snapshot)
     updated_snapshot.update({
+        "source_cv": source.model_dump(exclude={"raw_markdown"}),
         "adapted_cv": adapted.model_dump(exclude={"raw_markdown"}),
         "claim_review": review.model_dump(),
         "coverage_after": score_after.model_dump(),

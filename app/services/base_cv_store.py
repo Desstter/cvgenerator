@@ -9,6 +9,7 @@ from pathlib import Path
 
 from app.models.schemas import (
     BaseCVStore,
+    CVData,
     ExperienceContextEntry,
     ProfileDefinition,
 )
@@ -153,3 +154,33 @@ def build_real_context(store: BaseCVStore) -> str:
                     f"result={fact.result}; metric={fact.metric}; source={fact.source}"
                 )
     return "\n".join(lines)
+
+
+def _project_exclusions(store: BaseCVStore) -> set[str]:
+    return {value.strip().casefold().rstrip("/") for value in store.excluded_projects if value.strip()}
+
+
+def excluded_projects_in_cv(store: BaseCVStore, cv: CVData | None = None) -> list[str]:
+    """Identify projects barred from this candidate's CV, including old snapshots."""
+    source = cv or store.cv
+    exclusions = _project_exclusions(store)
+    return [project.name for project in source.projects
+            if project.name.strip().casefold() in exclusions
+            or project.url.strip().casefold().rstrip("/") in exclusions]
+
+
+def excluded_cv_mentions(store: BaseCVStore, cv: CVData) -> list[str]:
+    """Catch excluded work reintroduced in summaries or employment bullets."""
+    content = cv.model_dump_json(exclude={"raw_markdown"}).casefold()
+    return [value for value in store.excluded_projects
+            if value.strip() and value.strip().casefold().rstrip("/") in content]
+
+
+def cv_for_generation(store: BaseCVStore, cv: CVData | None = None) -> CVData:
+    """Keep excluded projects out of prompts, PDF output and saved snapshots."""
+    source = (cv or store.cv).model_copy(deep=True)
+    exclusions = _project_exclusions(store)
+    source.projects = [project for project in source.projects
+                       if project.name.strip().casefold() not in exclusions
+                       and project.url.strip().casefold().rstrip("/") not in exclusions]
+    return source

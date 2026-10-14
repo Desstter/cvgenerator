@@ -43,6 +43,16 @@ KNOWN_TECH_TERMS = (
     "aws", "azure", "gcp", "oracle cloud", "docker", "kubernetes", "terraform",
     "jenkins", "github actions", "gitlab ci", "sonarqube", "salesforce", "zendesk",
     "hubspot", "freshdesk", "genesys", "five9", "nice cxone",
+    "gemini", "openai", "claude", "llm", "rag", "embeddings",
+)
+
+# These claims need evidence for the particular employer, even if they appear
+# elsewhere in the candidate's summary, portfolio or independent projects.
+ROLE_BOUND_CLAIM_GROUPS = (
+    ("ai", "ia", "artificial intelligence", "inteligencia artificial"),
+    ("mobile app", "mobile apps", "mobile application", "mobile applications",
+     "aplicación móvil", "aplicaciones móviles"),
+    ("payment management", "payment system", "gestión de pagos", "sistema de pagos"),
 )
 
 
@@ -143,6 +153,11 @@ def _review_mutable_claims(original: CVData, adapted: CVData, real_context: str)
         for term in KNOWN_TECH_TERMS:
             if _contains_technology(text, term) and not _contains_technology(source, term):
                 unsupported.append(f"{path}: unsupported technology or tool {term}")
+        if path.startswith("experience."):
+            for aliases in ROLE_BOUND_CLAIM_GROUPS:
+                if (any(_contains_term(text, term) for term in aliases)
+                        and not any(_contains_term(source, term) for term in aliases)):
+                    unsupported.append(f"{path}: {aliases[0]} is not verified for this employer")
         if text.strip() and text.strip() not in previous:
             review_items.append({
                 "field": path,

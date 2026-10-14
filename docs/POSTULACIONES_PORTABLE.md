@@ -37,7 +37,9 @@ Mantén sincronizadas la skill del repositorio, su copia instalada y los documen
 
 - Abre la oferta y guarda un snapshot completo: URL estable, título, empresa, descripción literal, modalidad, fecha publicada observada, fecha de revisión y tipo de aplicación. El ejemplo está en [assets/job.example.json](assets/job.example.json). Escribe la misma descripción en `job.txt` para la CLI. Mantén la URL original como clave aunque se redirija a un ATS. Compara también empresa/cargo/ubicación para detectar duplicados entre fuentes.
 - Registra `discovered`. Aplica los criterios y califica con evidencia según `workflow.md`; distingue las condiciones de elegibilidad y competencias centrales de las herramientas concretas, valorando experiencia transferible y sin descartar automáticamente por una tecnología desconocida. Registra la decisión, las brechas y los datos desconocidos. Descarta en `skipped` con motivo o avanza a `shortlisted`. No generes un CV para cada coincidencia de una búsqueda sin leer la oferta.
+- **No descartes una vacante solo porque pide título profesional/universitario en Ingeniería o una carrera afín.** Para este candidato, la ausencia de ese título casi nunca es un bloqueo: si las responsabilidades encajan razonablemente, continúa con la candidatura y deja que la empresa evalúe la equivalencia, aunque la oferta lo llame requisito indispensable. Presenta la formación real (Técnico en Programación de Software/SENA) y responde con honestidad cualquier pregunta sobre títulos. No marques `hard_block` por este motivo aislado; detén el proceso solo si la función exige legalmente una licencia o credencial profesional específica, o si el portal hace imposible enviar una respuesta veraz.
 - Genera por CLI. Lee el resultado y ejecuta `inspect`. Revisa el CV completo, cada afirmación reescrita y el PDF real; evalúa veracidad, relevancia, claridad, idioma y presentación. La cobertura local de términos no predice la decisión del ATS o del reclutador.
+- Prioriza logros verificables dentro de la experiencia laboral. Un repositorio personal demuestra el trabajo técnico, pero no demuestra por sí solo para qué empleador se hizo. Asocia cada integración o producto con una empresa únicamente cuando el candidato u otra evidencia fiable confirme esa relación; registra el hecho en el contexto de esa empresa. Los proyectos que el candidato no quiere mostrar se anotan por nombre o URL en `excluded_projects` del `BaseCVStore`.
 - Si Easy Apply ofrece un CV ya guardado en LinkedIn, comprueba que sea pertinente y registra su nombre con `track --external-resume`. Ese flujo conserva el origen del archivo y no debe presentarse como una versión generada o revisada por la CLI para la oferta.
 - Corrige mediante `revise` con un JSON `CVData` editado. Si falta experiencia real, pregunta al candidato y actualiza el perfil con evidencia verificada antes de regenerar. No añadas herramientas, títulos, cifras o nivel de inglés para subir un puntaje.
 - Revisa la nueva versión. Para afirmaciones pendientes, rellena el `review_template` de `inspect`: decisión individual, cita exacta de la fuente y explicación de por qué respalda la frase completa. El campo `reviewer` identifica a la persona o agente que hizo esa revisión. Una cita existente no prueba por sí sola que el nuevo enunciado sea cierto; no confirmes en bloque ni ejecutes `confirm` para desbloquear el PDF sin revisar.
@@ -101,7 +103,7 @@ Emite un `job_assessment.json` junto al snapshot, con este contenido:
 }
 ```
 
-La nota es una rúbrica orientativa del agente y debe justificarse con la oferta y el perfil; no es una probabilidad de conseguir entrevista. Separa los requisitos por función: condiciones de elegibilidad (país, autorización, horario o contrato), capacidades centrales del trabajo y herramientas concretas. Marca un `hard_block` solo ante una condición de elegibilidad que falla o una competencia que la oferta declara expresamente imprescindible y que el candidato no demuestra. Una tecnología enumerada como ejemplo, preferida o aprendible no es por sí sola un bloqueo.
+La nota es una rúbrica orientativa del agente y debe justificarse con la oferta y el perfil; no es una probabilidad de conseguir entrevista. Separa los requisitos por función: condiciones de elegibilidad (país, autorización, horario o contrato), capacidades centrales del trabajo y herramientas concretas. Marca un `hard_block` solo ante una condición real de elegibilidad que falla, una licencia/credencial exigida legalmente para ejercer la función, o una capacidad central que el candidato no puede desempeñar. **La falta de un título universitario/profesional en Ingeniería o carrera afín casi nunca es por sí sola un bloqueo para este candidato, incluso cuando la oferta lo llame “indispensable”: si el trabajo encaja, sigue y permite que el empleador valore la equivalencia.** Nunca falsifiques un título; declara su formación técnica real y contesta con veracidad los filtros de formación. Si una respuesta veraz impide técnicamente el envío, registra ese impedimento concreto. Una tecnología enumerada como ejemplo, preferida o aprendible no es por sí sola un bloqueo.
 
 Evalúa el trabajo que la persona ya sabe hacer y su experiencia transferible antes de penalizar una herramienta desconocida. Por ejemplo, la falta de un lenguaje concreto no descarta automáticamente a quien domina otro lenguaje pertinente; la falta de un constructor visual no invalida experiencia real construyendo y manteniendo sitios WordPress; y la experiencia con herramientas de marketing relacionadas puede respaldar una candidatura sin afirmar que conoce todo el stack. Registra la brecha con precisión, pero no conviertas un requisito deseable o una herramienta sustituible en un rechazo automático. Solo presenta como dominio las herramientas verificadas; no inventes experiencia para mejorar el encaje.
 
@@ -114,6 +116,8 @@ Distingue salario publicado, expectativa del candidato y estimación de mercado.
 Registra como costos del proceso el proveedor/modelo, si hubo refinamiento y el número de generaciones. No anuncies un costo exacto de API sin datos reales de uso y tarifas verificadas. Los portales que pidan pagar se detienen para decisión del usuario; no efectúes pagos por la autorización de postularse.
 
 ## Evaluación del CV
+
+Comprueba la atribución de cada logro al empleador concreto. No conviertas un proyecto personal en experiencia de una empresa por similitud de tecnologías. Si el candidato confirma el vínculo, registra el hecho y su fuente en `experience_context` de esa empresa antes de generar. `excluded_projects` elimina del CV los proyectos indicados por nombre o URL; los CV históricos que todavía los mencionen deben revisarse antes de volver a usarse.
 
 Crea `cv_assessment_<record_id>.json` después de `inspect` y actualízalo para la versión revisada. Incluye record_id, huella del registro, motivos, acciones de mejora y:
 
@@ -182,6 +186,8 @@ python -m app.cli --workspace RUTA --profile developer --json-out RESULTADO.json
 | `track` | `--job job.json --state ESTADO [--record ID] [--note TEXTO] [--evidence receipt.json]` | Registra un estado observado; no opera el navegador ni envía nada |
 
 `candidate.json` es un `BaseCVStore`; `edited_cv.json` es solamente el objeto `CVData`, sin envoltorio `cv`. El idioma del CV se determina por la oferta en el generador. La plantilla BPO mantiene sus restricciones de una página. No cambies código para silenciar el guardián de afirmaciones.
+
+Para ocultar definitivamente un proyecto en este perfil, agrega su nombre o URL a `excluded_projects` en `candidate.json` y actualiza el perfil con `profile-update`. El generador lo excluye de los prompts y del PDF; las versiones históricas que lo mencionen se bloquean para descarga o uso hasta crear una revisión corregida.
 
 ## Ejemplo completo
 
@@ -328,7 +334,8 @@ No ejecute dos campañas concurrentes en el mismo workspace: la escritura es at�
     "languages": ["Spanish Native"],
     "detected_language": "en"
   },
-  "experience_context": {}
+  "experience_context": {},
+  "excluded_projects": []
 }
 ```
 

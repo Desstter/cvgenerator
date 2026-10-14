@@ -236,6 +236,14 @@ def track_application(root, args):
             raise ValueError("This state requires --record for the reviewed CV version")
         else:
             record = record_for(record_id, args.profile)
+            from app.models.schemas import CVData
+            from app.services.base_cv_store import (excluded_cv_mentions,
+                                                    excluded_projects_in_cv, load_base_cv)
+            store = load_base_cv(args.profile)
+            cv = CVData.model_validate(record["snapshot"]["adapted_cv"])
+            # A receipt may still need recording for a submission already in flight.
+            if args.state != "submitted" and (excluded_projects_in_cv(store, cv) or excluded_cv_mentions(store, cv)):
+                raise ValueError("This CV mentions work excluded by the current profile; revise it before use")
             report = inspect_record(root, record)
             if not record["reviewed"] or record["snapshot"]["claim_review"]["status"] == "blocked" or not report["quality"]["pdf_valid"]:
                 raise ValueError("CV must pass factual review and PDF validation first")
