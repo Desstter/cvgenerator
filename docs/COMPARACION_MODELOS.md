@@ -6,6 +6,14 @@ En `.env`, reemplaza el valor de `OPENAI_API_KEY` por la nueva clave y pega la d
 
 El proveedor predeterminado es OpenAI con `gpt-6-luna` y `OPENAI_SERVICE_TIER=fast`; un `.env` existente puede sobrescribir estos valores. La comparación selecciona explícitamente el proveedor y modelo para cada ejecución; no hace falta cambiar `.env` entre modelos. Gemini no cambia de modelo automáticamente cuando se indica `--model`.
 
+## Resultado de la prueba Luna Fast
+
+Se ejecutaron 10 ofertas reales de LinkedIn × 5 instrucciones de estilo con un perfil sintético marcado «SIMULACION NO ENVIAR» (no es una postulación). Las 50 condiciones terminaron con PDF válido, 50/50 respetaron el idioma esperado, las 100 llamadas se sirvieron en `fast` y la mediana de generación fue 37.1 s. La revisión ciega por rúbrica dio 88.8/100 de media; las cinco instrucciones quedaron dentro del ruido (88.3–89.2), así que no hay evidencia para declarar una ganadora por calidad.
+
+La prueba detectó una inconsistencia sistemática de voz en español (resumen en tercera persona con bullets en primera); se corrigió en los prompts y se validó con un piloto de 10 casos: 0/10 CV con voz mixta, 10/10 idioma y PDF correctos, 90.2/100 de nota ciega. El detalle reproducible está en [LUNA_FAST_2026-11-23.md](LUNA_FAST_2026-11-23.md).
+
+La configuración de producción se mantiene en OpenAI `gpt-6-luna` con `OPENAI_SERVICE_TIER=fast`. La comparación de modelos no altera ese valor por sí sola.
+
 ## Modelos iniciales
 
 El archivo `scripts/compare_models.py` enumera la matriz: OpenAI GPT-6 Luna, GPT-6.1 Terra y GPT-6.2 Sol; DeepSeek Flash y V4 Pro; Gemini 2.5 Flash y 3.8 Flash. La disponibilidad y el costo dependen de cada cuenta y pueden cambiar. Una llamada fallida se registra y no bloquea las demás.

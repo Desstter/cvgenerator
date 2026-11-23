@@ -38,6 +38,14 @@ LANGUAGE RULES:
 - Preserve official employer names, original role titles, credentials, dates and contact
   values literally. The PDF renderer localizes month and language labels where supported.
 
+NARRATIVE VOICE (critical for a human-written feel):
+- Use ONE grammatical voice consistently across the whole document. Never mix first person
+  ("Diseñé", "He liderado") with third person ("Ha desarrollado", "Desarrolló", "Cuenta con").
+- If experience bullets use first-person preterite ("Diseñé", "Lideré"), the summary must either
+  be a noun phrase without a conjugated verb ("Desarrollador Full-Stack con 5 años...") or use
+  first person. Never open a summary with "Ha desarrollado / Ha liderado".
+- Do not switch person between the summary, roles and projects; the CV must read as one author.
+
 TONE RULES (assert, don't aspire):
 - The CV asserts competence with direct action verbs, NEVER "looking to / eager to / seeking to learn".
 - No aspirational or apologetic framing about skills the candidate lacks. The candidate is a strong fit, not an applicant begging for a chance.

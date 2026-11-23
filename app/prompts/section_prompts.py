@@ -74,6 +74,7 @@ CV ADAPTATION RULES:
 - LANGUAGE: Use detected_language above consistently for all mutable prose and skill category labels, including every role and project. If the posting explicitly requests English proficiency, use English even when it is written in Spanish.
   Employer names, original role titles, credentials and contact details remain literal.
 - ANTI-STUFFING: never reuse the same job-description phrase across more than one bullet; do not prepend the job's headline term to every bullet ("AI-driven X, AI-driven Y..."); prefer one truthful mention in context. If a keyword can't be placed truthfully, leave it out.
+- NARRATIVE VOICE: use one consistent grammatical person across the summary, experience and projects. In Spanish, never combine first-person bullets ("Diseñé", "Lideré") with a third-person summary ("Ha desarrollado", "Desarrolló", "Cuenta con"); use a noun-phrase identity or first person.
 {context_block}
 {profile_rules}
 DATA TYPE REQUIREMENTS (critical):
@@ -109,7 +110,7 @@ def refine_cv_prompt(
     bpo_guard = ""
     if profile_type == "bpo":
         bpo_guard = """
-7. CAREER-CHANGE GUARD: preserve the exact job titles and never add direct BPO/call-center,
+8. CAREER-CHANGE GUARD: preserve the exact job titles and never add direct BPO/call-center,
    CRM, telephony, sales, billing, refund, retention, ticket-volume, CSAT, AHT, or FCR claims.
    Keep the summary to two sentences and the full resume concise enough for one page.
 """
@@ -138,6 +139,9 @@ REVIEW PASS — find and FIX these problems:
    verified source CV or that employer's context explicitly connects it to the employer.
    Do not turn a generic AI integration into an LLM, RAG, embeddings, agent, or named-model
    claim without explicit evidence for that employer.
+7. VOICE CONSISTENCY: the summary, role bullets and project bullets must use the same
+   grammatical person. Rewrite mixed cases (for example first-person bullets with a
+   third-person "Ha desarrollado" summary) without changing any fact, technology or metric.
 {bpo_guard}
 
 {lang_note}
