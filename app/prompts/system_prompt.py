@@ -33,8 +33,8 @@ VERIFIED DIFFERENTIATORS (critical):
 - Never replace one real skill with a different technology just to match a keyword.
 
 LANGUAGE RULES:
-- Detect the language of the JOB DESCRIPTION (not the CV)
-- Write mutable prose and skill-category labels in the job description's language.
+- Use English when the job explicitly requests English proficiency, even if the posting is in Spanish; otherwise use the job description's language.
+- Write all mutable prose and skill-category labels consistently in the chosen language.
 - Preserve official employer names, original role titles, credentials, dates and contact
   values literally. The PDF renderer localizes month and language labels where supported.
 

@@ -64,6 +64,8 @@ def build(output):
                     bundle.write(path, "generator/" + path.relative_to(ROOT).as_posix())
         for filename in ("requirements.txt", ".env.example", "AGENTS.md"):
             bundle.write(ROOT / filename, "generator/" + filename)
+        for filename in ("scripts/compare_models.py", "docs/COMPARACION_MODELOS.md"):
+            bundle.write(ROOT / filename, "generator/" + filename)
     return {"manual": str(manual), "archive": str(archive), "contains_personal_profiles": False}
 
 

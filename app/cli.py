@@ -287,7 +287,8 @@ def parser():
     update.add_argument("--candidate", required=True, type=Path)
     generate = commands.add_parser("generate", help="Adapt to a UTF-8 job description; calls the configured AI provider")
     generate.add_argument("--job", required=True, type=Path)
-    generate.add_argument("--provider", choices=("claude", "openai", "gemini"))
+    generate.add_argument("--provider", choices=("claude", "openai", "gemini", "deepseek"))
+    generate.add_argument("--model", help="Exact model ID; Gemini fallback is disabled for reproducible comparisons")
     generate.add_argument("--template", choices=("modern", "classic", "technical", "bilingual"))
     commands.add_parser("history")
     inspect = commands.add_parser("inspect", help="Read-back PDF QA, factual review, coverage and editable CV")
@@ -317,8 +318,9 @@ def execute(args):
     if args.command == "doctor":
         from app.config import settings
         return {"workspace": str(root), "candidate_initialized": (root / "data" / PROFILE_FILES[args.profile]).is_file(),
-                "default_provider": settings.ai_provider, "refine_pass": settings.refine_pass,
-                "keys_configured": {"claude": bool(settings.anthropic_api_key), "openai": bool(settings.openai_api_key), "gemini": bool(settings.google_api_key)},
+                "default_provider": settings.ai_provider, "openai_service_tier": settings.openai_service_tier, "refine_pass": settings.refine_pass,
+                "keys_configured": {"claude": bool(settings.anthropic_api_key), "openai": bool(settings.openai_api_key), "gemini": bool(settings.google_api_key), "deepseek": bool(settings.deepseek_api_key)},
+                "configured_models": {"claude": settings.claude_model, "openai": settings.openai_model, "gemini": settings.gemini_model, "deepseek": settings.deepseek_model},
                 "mode": "local pipeline, no HTTP server; browser submission is a separate agent action"}
     if args.command == "init":
         from app.models.schemas import BaseCVStore
@@ -364,6 +366,12 @@ def execute(args):
         return [{key: value for key, value in item.items() if key != "snapshot"}
                 for item in load_history() if item["profile_id"] == args.profile]
     if args.command == "generate":
+        if args.model:
+            from app.config import settings
+            selected = args.provider or settings.ai_provider
+            setattr(settings, {"claude": "claude_model", "openai": "openai_model", "gemini": "gemini_model", "deepseek": "deepseek_model"}[selected], args.model)
+            if selected == "gemini":
+                settings.gemini_fallback_models = []
         from app import main as api
         from app.services.base_cv_store import get_profile_definition
         job = args.job.read_text(encoding="utf-8-sig").strip()

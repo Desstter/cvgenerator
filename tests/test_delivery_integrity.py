@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models.schemas import (BaseCVStore, CVData, ContactInfo, EvidenceFact,
                                 ExperienceContextEntry, ExperienceEntry, JobDescription, ProjectEntry)
-from app.services.claim_guard import review_claims, sanitize_adaptation
+from app.services.claim_guard import review_claims, sanitize_adaptation, restore_unsupported_sections
 from app.services.base_cv_store import (build_real_context, cv_for_generation,
                                         excluded_cv_mentions, excluded_projects_in_cv)
 from app.services.cv_compactor import compact_one_bullet
@@ -24,6 +24,31 @@ def test_new_metrics_are_blocked_per_role():
     review = review_claims(original, adapted)
     assert review.status == "blocked"
     assert any("80%" in reason for reason in review.unsupported_claims)
+
+
+def test_unsupported_employer_attribution_restores_source_and_rechecks():
+    original = CVData(experience=[
+        ExperienceEntry(company="A", title="Developer", description="Built backend APIs.", technologies=["Node.js"]),
+        ExperienceEntry(company="B", title="Developer", description="Built React interfaces.", technologies=["React"]),
+    ])
+    adapted = original.model_copy(deep=True)
+    adapted.experience[0].description = "Built React interfaces and backend APIs."
+    adapted.experience[1].description = "Developed React interfaces."
+    review = review_claims(original, adapted)
+    assert review.status == "blocked"
+    repaired, restored = restore_unsupported_sections(original, adapted, review.unsupported_claims)
+    assert restored == ["experience.0"]
+    assert repaired.experience[0].description == original.experience[0].description
+    assert repaired.experience[1].description == "Developed React interfaces."
+    assert review_claims(original, repaired).status != "blocked"
+
+
+def test_unscoped_block_is_never_silently_repaired():
+    original = CVData(summary="Software developer.")
+    adapted = original.model_copy(deep=True)
+    repaired, restored = restore_unsupported_sections(original, adapted, ["One or more protected fields changed."])
+    assert not restored
+    assert repaired == adapted
 
 
 def test_lower_experience_bound_is_supported_by_source():
@@ -110,6 +135,47 @@ def test_generation_never_sends_or_renders_excluded_project(tmp_path, monkeypatc
     assert result.json()["adapted_cv"]["projects"] == []
     with fitz.open(tmp_path / "saved" / result.json()["pdf_filename"]) as pdf:
         assert "CV Generator" not in "".join(page.get_text() for page in pdf)
+
+
+def test_generation_recovers_from_cross_employer_technology_claim(tmp_path, monkeypatch):
+    from app import main
+    from app.services import history
+    from app.models.schemas import EducationEntry
+
+    store = BaseCVStore(cv=CVData(
+        contact=ContactInfo(name="Ana Example", email="ana@example.com"),
+        summary="Developer using Node.js and React.",
+        experience=[
+            ExperienceEntry(company="Acme", title="Developer", dates="2022 - 2024",
+                            description="Built Node.js APIs.", technologies=["Node.js"]),
+            ExperienceEntry(company="Beta", title="Developer", dates="2020 - 2022",
+                            description="Built React interfaces.", technologies=["React"]),
+        ],
+        education=[EducationEntry(institution="Example Institute", degree="Software Technology")],
+        skills=["Node.js", "React"],
+    ))
+
+    def adapt(provider, cv, job_text, **kwargs):
+        result = cv.model_copy(deep=True)
+        result.experience[0].description = "Built React interfaces and Node.js APIs."
+        return JobDescription(raw_text=job_text, title="Developer", detected_language="en"), result
+
+    monkeypatch.setattr(main, "load_base_cv", lambda profile_id="developer": store)
+    monkeypatch.setattr(main, "get_provider", lambda name=None: type("Provider", (), {"model": "offline"})())
+    monkeypatch.setattr(main, "analyze_and_adapt", adapt)
+    monkeypatch.setattr(main.settings, "refine_pass", False)
+    monkeypatch.setattr(main.settings, "outputs_dir", tmp_path / "generated")
+    monkeypatch.setattr(main.settings, "saved_dir", tmp_path / "saved")
+    (tmp_path / "generated").mkdir()
+    (tmp_path / "saved").mkdir()
+    monkeypatch.setattr(history, "HISTORY_FILE", tmp_path / "history.json")
+    response = TestClient(app).post("/api/adapt", data={"job_description": "Node.js developer"})
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["adapted_cv"]["experience"][0]["description"] == "Built Node.js APIs."
+    assert not result["claim_review"]["unsupported_claims"]
+    with fitz.open(tmp_path / "saved" / result["pdf_filename"]) as pdf:
+        assert "Built React interfaces and Node.js APIs" not in "".join(page.get_text() for page in pdf)
 
 
 def test_old_cv_with_excluded_project_cannot_be_downloaded(tmp_path, monkeypatch):

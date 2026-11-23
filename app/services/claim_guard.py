@@ -309,6 +309,33 @@ def sanitize_adaptation(original: CVData, adapted: CVData, profile_type: str) ->
     return sanitize_developer_adaptation(original, adapted)
 
 
+def restore_unsupported_sections(original: CVData, adapted: CVData,
+                                 unsupported_claims: list[str]) -> tuple[CVData, list[str]]:
+    """Restore source sections for path-specific failures; never approve a claim here."""
+    safe = adapted.model_copy(deep=True)
+    restored: set[str] = set()
+    for issue in unsupported_claims:
+        path = issue.split(":", 1)[0]
+        if path == "summary":
+            safe.summary = original.summary
+            restored.add(path)
+            continue
+        match = re.fullmatch(r"experience\.(\d+)\.bullet\.\d+", path)
+        if match:
+            index = int(match.group(1))
+            if index < len(original.experience) and index < len(safe.experience):
+                safe.experience[index].description = original.experience[index].description
+                restored.add(f"experience.{index}")
+            continue
+        match = re.fullmatch(r"projects\.(\d+)", path)
+        if match:
+            index = int(match.group(1))
+            if index < len(original.projects) and index < len(safe.projects):
+                safe.projects[index].description = original.projects[index].description
+                restored.add(path)
+    return safe, sorted(restored)
+
+
 def review_bpo_claims(original: CVData, adapted: CVData, real_context: str = "") -> ClaimReview:
     """Return a user-visible, deterministic audit of generated claims."""
     source_text = f"{_cv_text(original)} {real_context.lower()}"

@@ -39,7 +39,7 @@ from app.services.ats_optimizer import analyze_keyword_match, reorder_skills
 from app.services.cv_compactor import compact_one_bullet
 from app.services.cv_quality import editorial_issues, evidence_questions
 from app.services.pdf_generator import ALLOWED_TEMPLATES, generate_pdf_from_template
-from app.services.claim_guard import sanitize_adaptation, review_claims
+from app.services.claim_guard import sanitize_adaptation, review_claims, restore_unsupported_sections
 from app.services.opportunity_store import list_opportunities
 from app.services.event_log import log_event, get_events, clear_events, install_logging_bridge, Timer
 
@@ -235,6 +235,11 @@ def adapt_cv_endpoint(
         if excluded_cv_mentions(store, adapted_cv):
             raise ValueError("The generated CV mentions work excluded by this candidate's profile")
         claim_review = review_claims(cv, adapted_cv, real_context, profile_type=profile_type)
+        if claim_review.status == "blocked":
+            adapted_cv, restored = restore_unsupported_sections(cv, adapted_cv, claim_review.unsupported_claims)
+            if restored:
+                log_event("claims", "Restored verified source text for: " + ", ".join(restored), level="warn")
+                claim_review = review_claims(cv, adapted_cv, real_context, profile_type=profile_type)
         if claim_review.status == "blocked":
             raise ValueError(
                 "Truth review blocked the generated CV: "

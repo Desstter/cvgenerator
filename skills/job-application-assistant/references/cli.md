@@ -32,7 +32,7 @@ python -m app.cli --workspace RUTA --profile developer --json-out RESULTADO.json
 | `init` | `--candidate candidate.json` | Importa BaseCVStore explícito; no sobrescribe una identidad existente |
 | `profile` | ninguno | Exporta el perfil verificado del workspace |
 | `profile-update` | `--candidate candidate.json` | Actualiza hechos conservando contacto/perfil; guarda revisión previa |
-| `generate` | `--job job.txt [--provider claude\|openai\|gemini] [--template technical\|modern\|classic\|bilingual]` | Ejecuta adaptación/refinamiento, veracidad, cobertura, PDF e historial |
+| `generate` | `--job job.txt [--provider claude\|openai\|gemini\|deepseek] [--model ID] [--template technical\|modern\|classic\|bilingual]` | Ejecuta adaptación/refinamiento, veracidad, cobertura, PDF e historial; `--model` fija el modelo exacto y desactiva alternativas de Gemini |
 | `history` | ninguno | Versiones de CV y estado de revisión |
 | `inspect` | `--record ID` | CV fuente/adaptado, evidencia, revisión, cobertura y validación del PDF |
 | `revise` | `--record ID --cv edited_cv.json` | Revisa y renderiza CVData editado; devuelve un ID nuevo y mantiene parent_id |
@@ -41,7 +41,7 @@ python -m app.cli --workspace RUTA --profile developer --json-out RESULTADO.json
 | `applications` | ninguno | Lee el registro de postulaciones para continuar |
 | `track` | `--job job.json --state ESTADO [--record ID] [--note TEXTO] [--evidence receipt.json]` | Registra un estado observado; no opera el navegador ni envía nada |
 
-`candidate.json` es un `BaseCVStore`; `edited_cv.json` es solamente el objeto `CVData`, sin envoltorio `cv`. El idioma del CV se determina por la oferta en el generador. La plantilla BPO mantiene sus restricciones de una página. No cambies código para silenciar el guardián de afirmaciones.
+`candidate.json` es un `BaseCVStore`; `edited_cv.json` es solamente el objeto `CVData`, sin envoltorio `cv`. El idioma del CV sigue la oferta; si esta solicita competencia en inglés, úsalo aunque el anuncio esté en español. Una mención de clases de inglés o "sin inglés" no es por sí sola un requisito. Verifica todo el PDF y el contenido, pues el modelo puede mezclar idiomas. La plantilla BPO mantiene sus restricciones de una página. No cambies código para silenciar el guardián de afirmaciones.
 
 Para ocultar definitivamente un proyecto en este perfil, agrega su nombre o URL a `excluded_projects` en `candidate.json` y actualiza el perfil con `profile-update`. El generador lo excluye de los prompts y del PDF; las versiones históricas que lo mencionen se bloquean para descarga o uso hasta crear una revisión corregida.
 

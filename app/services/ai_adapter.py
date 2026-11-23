@@ -2,6 +2,8 @@ import json
 import re
 import time
 import logging
+import os
+from pathlib import Path
 from abc import ABC, abstractmethod
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
@@ -18,6 +20,22 @@ from app.prompts.section_prompts import (
 from app.services.cv_analyzer import build_ai_parse_prompt, parse_ai_response_to_cv
 
 logger = logging.getLogger(__name__)
+
+
+def _record_usage(provider, model, usage, service_tier=None):
+    """Optionally record provider-reported token usage, without prompts or credentials."""
+    target = os.environ.get("CV_USAGE_FILE")
+    if not target or usage is None:
+        return
+    if hasattr(usage, "model_dump"):
+        usage = usage.model_dump(exclude_none=True)
+    elif not isinstance(usage, dict):
+        return
+    try:
+        with Path(target).open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps({"provider": provider, "model": model, "service_tier": service_tier, "usage": usage}, ensure_ascii=False) + "\n")
+    except OSError:
+        logger.warning("Could not save provider usage data")
 
 
 def _str_list() -> dict:
@@ -146,7 +164,7 @@ def _is_retryable_error(exception: Exception) -> bool:
 
     if exc_name in ['APIConnectionError', 'APITimeoutError', 'RateLimitError',
                     'InternalServerError', 'ServiceUnavailableError',
-                    'ConnectionError', 'Timeout', 'ReadTimeout',
+                    'ConnectionError', 'Timeout', 'ReadTimeout', 'ReadError',
                     # google.api_core exceptions (Gemini)
                     'ResourceExhausted', 'ServiceUnavailable', 'DeadlineExceeded',
                     'TooManyRequests', 'Aborted']:
@@ -281,15 +299,19 @@ class OpenAIProvider(AIProvider):
     )
     def chat(self, system: str, user: str) -> str:
         with _APICall("OpenAI", self.model, len(system) + len(user)) as call:
-            response = self.client.chat.completions.create(
+            response = self.client.responses.create(
                 model=self.model,
-                messages=[
+                store=False,
+                service_tier=self.config.openai_service_tier,
+                input=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                max_tokens=self.config.openai_max_tokens,
+                max_output_tokens=self.config.openai_max_tokens,
             )
-            text = response.choices[0].message.content
+            text = response.output_text
+            _record_usage("openai", self.model, getattr(response, "usage", None), getattr(response, "service_tier", None))
+            log_event("api", f"OpenAI service tier: requested={self.config.openai_service_tier}, served={getattr(response, 'service_tier', 'unknown')}")
             call.done(len(text or ""))
             return text
 
@@ -303,18 +325,52 @@ class OpenAIProvider(AIProvider):
     def chat_json(self, system: str, user: str, schema=None) -> dict:
         """Use OpenAI JSON mode so the response is guaranteed to be valid JSON."""
         with _APICall("OpenAI", self.model, len(system) + len(user), mode="json") as call:
-            response = self.client.chat.completions.create(
+            response = self.client.responses.create(
                 model=self.model,
-                messages=[
+                store=False,
+                service_tier=self.config.openai_service_tier,
+                input=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                max_tokens=self.config.openai_max_tokens,
-                response_format={"type": "json_object"},
+                max_output_tokens=self.config.openai_max_tokens,
+                text={"format": {"type": "json_object"}},
             )
-            text = response.choices[0].message.content
+            text = response.output_text
+            _record_usage("openai", self.model, getattr(response, "usage", None), getattr(response, "service_tier", None))
+            log_event("api", f"OpenAI service tier: requested={self.config.openai_service_tier}, served={getattr(response, 'service_tier', 'unknown')}")
             call.done(len(text or ""))
             return json.loads(text)
+
+
+class DeepSeekProvider(AIProvider):
+    def __init__(self):
+        import openai
+        self.client = openai.OpenAI(api_key=settings.deepseek_api_key, base_url="https://api.deepseek.com")
+        self.model = settings.deepseek_model
+        self.config = settings
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=4),
+           retry=retry_if_exception(_is_retryable_error), before_sleep=_log_before_sleep, reraise=True)
+    def _request(self, system, user, json_mode=False):
+        with _APICall("DeepSeek", self.model, len(system) + len(user), mode="json" if json_mode else "chat") as call:
+            options = {"response_format": {"type": "json_object"}} if json_mode else {}
+            response = self.client.chat.completions.create(
+                model=self.model, messages=[{"role": "system", "content": system},
+                                            {"role": "user", "content": user}],
+                max_tokens=self.config.deepseek_max_tokens, **options)
+            text = response.choices[0].message.content
+            _record_usage("deepseek", self.model, getattr(response, "usage", None))
+            if not text or not text.strip():
+                raise ValueError("DeepSeek returned an empty response")
+            call.done(len(text))
+            return text
+
+    def chat(self, system, user):
+        return self._request(system, user)
+
+    def chat_json(self, system, user, schema=None):
+        return json.loads(_extract_json(self._request(system, user, json_mode=True)))
 
 
 class GeminiProvider(AIProvider):
@@ -352,6 +408,7 @@ class GeminiProvider(AIProvider):
                           mode=generation_config.get("response_mime_type", "chat")) as call:
                 try:
                     response = self._generate(model_name, system, prompt, generation_config)
+                    _record_usage("gemini", model_name, getattr(response, "usage_metadata", None))
                     text = response.text
                     self.model = model_name
                     call.done(len(text))
@@ -408,6 +465,9 @@ def get_provider(name: str | None = None) -> AIProvider:
     elif provider_name == "openai":
         provider = OpenAIProvider()
         model = settings.openai_model
+    elif provider_name == "deepseek":
+        provider = DeepSeekProvider()
+        model = settings.deepseek_model
     elif provider_name == "gemini":
         provider = GeminiProvider()
         model = " → ".join(provider._models)

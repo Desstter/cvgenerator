@@ -44,7 +44,7 @@ JOB ANALYSIS fields (extract from the job description):
 - preferred_skills: nice-to-have skills
 - keywords: other important keywords
 - responsibilities: main responsibilities list
-- detected_language: "en" or "es"
+- detected_language: output CV language, "en" if the posting explicitly requests English proficiency, otherwise the posting's language ("en" or "es"). Do not treat "no inglés" as an English requirement.
 - DEDUPLICATE: each skill/keyword must appear in exactly ONE of required_skills /
   preferred_skills / keywords (priority: required > preferred > keywords). Duplicates
   dilute the ATS score.
@@ -71,7 +71,7 @@ CV ADAPTATION RULES:
 - CATEGORIZE: group the skills into 3-5 named categories in "skill_categories" (e.g. Languages,
   Frameworks, Cloud & Infrastructure, Databases & Tools). Category names in the job's language.
   Every displayed skill in "skills" must appear in exactly one category.
-- LANGUAGE: Write mutable prose and skill category labels in the job's language.
+- LANGUAGE: Use detected_language above consistently for all mutable prose and skill category labels, including every role and project. If the posting explicitly requests English proficiency, use English even when it is written in Spanish.
   Employer names, original role titles, credentials and contact details remain literal.
 - ANTI-STUFFING: never reuse the same job-description phrase across more than one bullet; do not prepend the job's headline term to every bullet ("AI-driven X, AI-driven Y..."); prefer one truthful mention in context. If a keyword can't be placed truthfully, leave it out.
 {context_block}

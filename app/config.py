@@ -3,14 +3,18 @@ from pathlib import Path
 
 
 class Settings(BaseSettings):
-    ai_provider: str = "claude"
+    ai_provider: str = "openai"
 
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     google_api_key: str = ""
+    deepseek_api_key: str = ""
 
     claude_model: str = "claude-sonnet-5"
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-6-luna"
+    openai_service_tier: str = "fast"
+    deepseek_model: str = "deepseek-flash"
+    deepseek_max_tokens: int = 16384
     gemini_model: str = "gemini-3.5-flash"
     gemini_fallback_models: list[str] = [
         "gemini-2.5-flash",
@@ -19,7 +23,7 @@ class Settings(BaseSettings):
 
     # Token limits per model
     claude_max_tokens: int = 16384
-    openai_max_tokens: int = 4096
+    openai_max_tokens: int = 16384
     # Generous budget: on gemini-2.5 models "thinking" tokens count against
     # max_output_tokens, and a truncated response silently degrades the CV
     # (json-repair recovers partial JSON and drops fields).
