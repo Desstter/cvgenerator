@@ -11,7 +11,9 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
 
     claude_model: str = "claude-sonnet-5"
-    openai_model: str = "gpt-6-luna"
+    # Production default chosen by the 360-CV benchmark: Sol wins under both blind judges.
+    # See docs/INFORME_V2_LUNA_TERRA_SOL.md. Override with OPENAI_MODEL for a cheaper run.
+    openai_model: str = "gpt-6.2-sol"
     openai_service_tier: str = "fast"
     deepseek_model: str = "deepseek-flash"
     deepseek_max_tokens: int = 16384

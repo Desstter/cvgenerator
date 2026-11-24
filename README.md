@@ -17,7 +17,7 @@ Python · FastAPI · Jinja2 · PyMuPDF · xhtml2pdf · Anthropic API · OpenAI A
 - **Revisión antes de descargar** — muestra cada frase nueva junto a la evidencia fuente más cercana; permite editar y regenerar el PDF sin llamar de nuevo a la IA
 - **PDF comprobado** — lee el archivo generado y verifica que estén presentes el contacto, el resumen y los bullets esperados
 - **Versiones reproducibles** — el historial guarda la oferta, el CV fuente, la adaptación, el modelo, la plantilla, la cobertura y la revisión; cada edición crea una versión nueva y permite registrar si hubo entrevista u oferta
-- **Multi-modelo** — elige entre Claude (Anthropic), GPT-6 Luna/Terra/Sol (OpenAI) o Gemini (Google); por defecto OpenAI `gpt-6-luna` con `service_tier=fast`
+- **Multi-modelo** — elige entre Claude (Anthropic), GPT-6 Luna/Terra/Sol (OpenAI) o Gemini (Google); por defecto OpenAI `gpt-6.2-sol` con `service_tier=fast` (mejor calidad medida; Luna queda como alternativa barata)
 - **Voz consistente** — el resumen y los bullets mantienen la misma persona gramatical; se evita el patrón «Ha desarrollado» junto a «Diseñé» que delata un texto generado
 - **Análisis de PDF** — extrae el contenido de tu CV actual con PyMuPDF
 - **Optimización por rol** — adapta el lenguaje, keywords y énfasis al puesto específico

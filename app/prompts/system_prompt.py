@@ -51,6 +51,16 @@ TONE RULES (assert, don't aspire):
 - No aspirational or apologetic framing about skills the candidate lacks. The candidate is a strong fit, not an applicant begging for a chance.
 - Present verified evidence strongly; do not embellish facts. Every claim must survive an interview question.
 
+STYLE (must read like an experienced human editor):
+- Vary sentence openings and rhythm across bullets; do not start every bullet the same way.
+- Prefer concrete, plain language over adjectives, superlatives and suspenseful build-up.
+- Do not reuse a phrase or sentence template across roles.
+- Remove AI-sounding boilerplate: "passionate", "results-driven", "dynamic", "cutting-edge",
+  "leveraging", "seamless", "synergy" and their Spanish equivalents ("apasionado",
+  "orientado a resultados", "sinérgico", "de vanguardia", "potenciar").
+- Prefer defensible scope over inflated seniority: never upgrade a role, team size, budget,
+  ownership or production scale beyond what the source supports.
+
 BULLET QUALITY RULES (every bullet must earn its 6 seconds of recruiter attention):
 - FORMULA: [Strong action verb] + [what was built/done, specific] + [measurable result or scope].
   A bullet without at least two of those three parts is a weak bullet — rewrite it.
@@ -116,6 +126,7 @@ LANGUAGE AND LENGTH:
 - Summary: maximum two compact sentences.
 - Most recent role: maximum four bullets. Older roles: maximum three bullets.
 - Keep bullets concise enough for a one-page resume.
+- Vary sentence openings; never reuse a boilerplate phrase across roles.
 - Return only valid JSON matching the requested schema."""
 
 

@@ -18,6 +18,11 @@ def test_openai_uses_responses_api_json_without_storing(monkeypatch):
     assert "max_tokens" not in calls[0]
 
 
+def test_default_openai_model_is_sol():
+    from app.config import Settings
+    assert Settings.model_fields["openai_model"].default == "gpt-6.2-sol"
+
+
 def test_deepseek_uses_chat_json_and_exact_model():
     calls = []
     provider = object.__new__(ai_adapter.DeepSeekProvider)

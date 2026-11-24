@@ -154,9 +154,16 @@ Ningún CV es una postulación ni representa a una persona real.
 - **Luna vs Terra:** empate técnico (−0.16 sobre 120; 52 victorias, 15 empates y 53 derrotas). Terra es 12.7 s más rápido, pero cuesta 7× Luna.
 - **Costo absoluto:** Sol ≈ USD 0.049/CV (USD 4.85 por 100), Terra ≈ USD 0.025 (USD 2.45) y Luna ≈ USD 0.0035 (USD 0.35). La diferencia por CV es de centavos.
 - **Recomendación:** Sol para CVs de alto interés (mejor calidad y más rápido que Luna); Luna para volumen o si el costo importa; Terra solo si la latencia es crítica.
-- **Producción:** el default sigue en Luna Fast; no lo cambié sin confirmación. Pasar a Sol es un cambio de configuración.
+- **Producción:** se implementó **Sol** (`gpt-6.2-sol`, `service_tier=fast`) como default; el estilo `natural` quedó integrado en el prompt y el guard de evidencia sigue intacto.
 - **Mejor instrucción:** natural para Luna y Sol; defensa para Terra. Las diferencias entre estilos son pequeñas y no justifican sobreajustar.
 - **Fidelidad y forma:** 0 afirmaciones no respaldadas, 0 aperturas prohibidas, 0 buzzwords, 100% de campos protegidos, 0 voz mixta en los 216 CV en español y 1 página en los 360 CV.
+
+## Implementación en producción
+
+- `openai_model` por defecto y `OPENAI_MODEL` en `.env` y `.env.example`: `gpt-6.2-sol`; `OPENAI_SERVICE_TIER=fast`.
+- Perfil developer: plantilla `technical` de una página, la misma usada en el benchmark.
+- Estilo `natural` (el mejor para Sol) incorporado al prompt del sistema; se mantienen la voz consistente, el guard de evidencia y la revisión de afirmaciones.
+- Verificación: `doctor` reporta `gpt-6.2-sol` con tier `fast`; una generación de humo hizo dos llamadas servidas en `fast`, con PDF válido, idioma correcto y revisión de afirmaciones pendiente; la suite completa pasa con **86 pruebas**.
 
 ## Límites
 

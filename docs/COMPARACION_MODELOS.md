@@ -4,7 +4,7 @@
 
 En `.env`, reemplaza el valor de `OPENAI_API_KEY` por la nueva clave y pega la de DeepSeek en `DEEPSEEK_API_KEY`. Conserva `GOOGLE_API_KEY` para Gemini. Una sola clave por proveedor sirve para todos sus modelos disponibles en esa cuenta. No compartas `.env`, que está excluido de Git. La presencia de una clave no garantiza autenticación, saldo o acceso a un modelo.
 
-El proveedor predeterminado es OpenAI con `gpt-6-luna` y `OPENAI_SERVICE_TIER=fast`; un `.env` existente puede sobrescribir estos valores. La comparación selecciona explícitamente el proveedor y modelo para cada ejecución; no hace falta cambiar `.env` entre modelos. Gemini no cambia de modelo automáticamente cuando se indica `--model`.
+El proveedor predeterminado es OpenAI con `gpt-6.2-sol` y `OPENAI_SERVICE_TIER=fast`; un `.env` existente puede sobrescribir estos valores. La comparación selecciona explícitamente el proveedor y modelo para cada ejecución; no hace falta cambiar `.env` entre modelos. Gemini no cambia de modelo automáticamente cuando se indica `--model`.
 
 ## Resultado de la prueba Luna Fast
 
@@ -12,7 +12,11 @@ Se ejecutaron 10 ofertas reales de LinkedIn × 5 instrucciones de estilo con un 
 
 La prueba detectó una inconsistencia sistemática de voz en español (resumen en tercera persona con bullets en primera); se corrigió en los prompts y se validó con un piloto de 10 casos: 0/10 CV con voz mixta, 10/10 idioma y PDF correctos, 90.2/100 de nota ciega. El detalle reproducible está en [LUNA_FAST_2026-11-23.md](LUNA_FAST_2026-11-23.md).
 
-La configuración de producción se mantiene en OpenAI `gpt-6-luna` con `OPENAI_SERVICE_TIER=fast`. La comparación de modelos no altera ese valor por sí sola.
+## Comparación de 360 CVs y decisión final
+
+Se ejecutaron 20 ofertas reales × 6 instrucciones de estilo × 3 modelos, con dos jueces ciegos y una rúbrica de 6 criterios. Sol quedó primero con ambos jueces: 82.4/100 con el juez Sol y 79.0/100 con el juez Luna, por delante de Luna (76.8/76.6) y Terra (76.7/76.2). Sol frente a Luna ganó 117 de 120 pares; Terra y Luna empataron. Sol costó unos USD 0.049 por CV (USD 4.85 por 100) y su mediana fue 33.6 s, frente a 38.6 s de Luna y 25.9 s de Terra.
+
+**Decisión:** producción usa `gpt-6.2-sol` con `OPENAI_SERVICE_TIER=fast`; el estilo `natural` quedó integrado en el prompt y se mantuvieron el guard de evidencia y la voz consistente. Luna queda como alternativa de bajo costo con `--model gpt-6-luna`. Detalle en [INFORME_V2_LUNA_TERRA_SOL.md](INFORME_V2_LUNA_TERRA_SOL.md).
 
 ## Modelos iniciales
 
