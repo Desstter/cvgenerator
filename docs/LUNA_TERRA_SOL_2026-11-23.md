@@ -1,5 +1,7 @@
 # Luna vs Terra vs Sol: 10 ofertas x 5 prompts
 
+> **Actualización:** este benchmark de 150 casos usó `service_tier=fast`. La comparación posterior de 360 CVs y la decisión final usan `gpt-6.2-sol` con tier estándar. Se conserva como evidencia histórica.
+
 Simulación de 10 ofertas reales de LinkedIn × 5 instrucciones de estilo × 3 modelos de OpenAI,
 con el mismo perfil sintético marcado «SIMULACION NO ENVIAR», la misma plantilla y el mismo flujo de dos pasadas.
 Ningún CV es una postulación ni representa a una persona real.

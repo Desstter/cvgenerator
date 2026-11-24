@@ -4,7 +4,7 @@
 
 En `.env`, reemplaza el valor de `OPENAI_API_KEY` por la nueva clave y pega la de DeepSeek en `DEEPSEEK_API_KEY`. Conserva `GOOGLE_API_KEY` para Gemini. Una sola clave por proveedor sirve para todos sus modelos disponibles en esa cuenta. No compartas `.env`, que está excluido de Git. La presencia de una clave no garantiza autenticación, saldo o acceso a un modelo.
 
-El proveedor predeterminado es OpenAI con `gpt-6.2-sol` y `OPENAI_SERVICE_TIER=fast`; un `.env` existente puede sobrescribir estos valores. La comparación selecciona explícitamente el proveedor y modelo para cada ejecución; no hace falta cambiar `.env` entre modelos. Gemini no cambia de modelo automáticamente cuando se indica `--model`.
+El proveedor predeterminado es OpenAI con `gpt-6.2-sol` y tier estándar (`OPENAI_SERVICE_TIER` vacío); un `.env` existente puede sobrescribir estos valores. La comparación selecciona explícitamente el proveedor y modelo para cada ejecución; no hace falta cambiar `.env` entre modelos. Gemini no cambia de modelo automáticamente cuando se indica `--model`.
 
 ## Resultado de la prueba Luna Fast
 
@@ -16,7 +16,7 @@ La prueba detectó una inconsistencia sistemática de voz en español (resumen e
 
 Se ejecutaron 20 ofertas reales × 6 instrucciones de estilo × 3 modelos, con dos jueces ciegos y una rúbrica de 6 criterios. Sol quedó primero con ambos jueces: 82.4/100 con el juez Sol y 79.0/100 con el juez Luna, por delante de Luna (76.8/76.6) y Terra (76.7/76.2). Sol frente a Luna ganó 117 de 120 pares; Terra y Luna empataron. Sol costó unos USD 0.049 por CV (USD 4.85 por 100) y su mediana fue 33.6 s, frente a 38.6 s de Luna y 25.9 s de Terra.
 
-**Decisión:** producción usa `gpt-6.2-sol` con `OPENAI_SERVICE_TIER=fast`; el estilo `natural` quedó integrado en el prompt y se mantuvieron el guard de evidencia y la voz consistente. Luna queda como alternativa de bajo costo con `--model gpt-6-luna`. Detalle en [INFORME_V2_LUNA_TERRA_SOL.md](INFORME_V2_LUNA_TERRA_SOL.md).
+**Decisión:** producción usa `gpt-6.2-sol` con tier estándar (`OPENAI_SERVICE_TIER` vacío, sin `fast`); el estilo `natural` quedó integrado en el prompt y se mantuvieron el guard de evidencia y la voz consistente. El benchmark se ejecutó con `fast` para comparar en igualdad de condiciones; retirarlo de producción es una decisión posterior. Luna queda como alternativa de bajo costo con `--model gpt-6-luna`. Detalle en [INFORME_V2_LUNA_TERRA_SOL.md](INFORME_V2_LUNA_TERRA_SOL.md).
 
 ## Modelos iniciales
 

@@ -290,6 +290,10 @@ class OpenAIProvider(AIProvider):
         self.config = settings
         self.openai = openai
 
+    def _tier_param(self):
+        tier = (getattr(self.config, "openai_service_tier", "") or "").strip()
+        return {"service_tier": tier} if tier else {}
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=4),
@@ -302,7 +306,7 @@ class OpenAIProvider(AIProvider):
             response = self.client.responses.create(
                 model=self.model,
                 store=False,
-                service_tier=self.config.openai_service_tier,
+                **self._tier_param(),
                 input=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
@@ -311,7 +315,7 @@ class OpenAIProvider(AIProvider):
             )
             text = response.output_text
             _record_usage("openai", self.model, getattr(response, "usage", None), getattr(response, "service_tier", None))
-            log_event("api", f"OpenAI service tier: requested={self.config.openai_service_tier}, served={getattr(response, 'service_tier', 'unknown')}")
+            log_event("api", f"OpenAI service tier: requested={self.config.openai_service_tier or 'standard'}, served={getattr(response, 'service_tier', 'unknown')}")
             call.done(len(text or ""))
             return text
 
@@ -328,7 +332,7 @@ class OpenAIProvider(AIProvider):
             response = self.client.responses.create(
                 model=self.model,
                 store=False,
-                service_tier=self.config.openai_service_tier,
+                **self._tier_param(),
                 input=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
@@ -338,7 +342,7 @@ class OpenAIProvider(AIProvider):
             )
             text = response.output_text
             _record_usage("openai", self.model, getattr(response, "usage", None), getattr(response, "service_tier", None))
-            log_event("api", f"OpenAI service tier: requested={self.config.openai_service_tier}, served={getattr(response, 'service_tier', 'unknown')}")
+            log_event("api", f"OpenAI service tier: requested={self.config.openai_service_tier or 'standard'}, served={getattr(response, 'service_tier', 'unknown')}")
             call.done(len(text or ""))
             return json.loads(text)
 

@@ -21,6 +21,18 @@ def test_openai_uses_responses_api_json_without_storing(monkeypatch):
 def test_default_openai_model_is_sol():
     from app.config import Settings
     assert Settings.model_fields["openai_model"].default == "gpt-6.2-sol"
+    assert Settings.model_fields["openai_service_tier"].default == ""
+
+
+def test_openai_omits_service_tier_when_empty():
+    calls = []
+    provider = object.__new__(ai_adapter.OpenAIProvider)
+    provider.model = "gpt-6.2-sol"
+    provider.config = SimpleNamespace(openai_max_tokens=2000, openai_service_tier="")
+    provider.client = SimpleNamespace(responses=SimpleNamespace(create=lambda **kw: calls.append(kw) or SimpleNamespace(output_text='{"ok": true}')))
+    assert provider.chat_json("Return JSON", "test") == {"ok": True}
+    assert calls[0]["model"] == "gpt-6.2-sol"
+    assert "service_tier" not in calls[0]
 
 
 def test_deepseek_uses_chat_json_and_exact_model():
