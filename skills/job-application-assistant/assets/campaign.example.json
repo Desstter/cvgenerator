@@ -27,6 +27,7 @@
   "application_answers": {
     "availability": {"value": null, "verified": false},
     "salary_expectation": {"value": null, "currency": null, "period": null, "verified": false},
+    "salary_policy": {"mode": "verified_only", "minimum": null},
     "work_authorization": {"value": null, "country": null, "verified": false},
     "technology_years": {},
     "reusable_answers": []

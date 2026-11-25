@@ -25,11 +25,11 @@ Mensaje de inicio sugerido:
 
 El paquete ZIP contiene `generator/` (código local sin perfiles personales) y `job-application-assistant/` (skill, referencias y muestras ficticias). Puedes usar el repositorio original que ya contiene la CLI o el generador del paquete. Crea su entorno Python, configura el proveedor autorizado y ajusta las rutas de campaign.json. La skill puede instalarse copiando su carpeta al directorio de skills del entorno; también puedes usar este documento sin instalarla.
 
-La CLI genera/revisa/exporta CVs y mantiene el registro. La búsqueda, el llenado y el envío requieren un agente con herramientas de navegador en ese chat. El paquete no inicia por sí solo un robot de postulaciones ni trae sesiones de LinkedIn.
+La CLI genera/revisa/exporta CVs y mantiene el registro. Un agente opera la búsqueda, el llenado y el envío con las herramientas del entorno. La sección de exploración programada explica cómo generar y retomar una cola privada de vacantes con una automatización local.
 
 """
     sections = [intro, SKILL.joinpath("SKILL.md").read_text(encoding="utf-8")]
-    for name in ("workflow.md", "cli.md"):
+    for name in ("workflow.md", "cli.md", "recurring.md"):
         sections.append("\n\n---\n\n" + (SKILL / "references" / name).read_text(encoding="utf-8"))
     for path in sorted((SKILL / "assets").glob("*.json")):
         sections.append(f"\n\n## Formato incluido: {path.name}\n\n```json\n{path.read_text(encoding='utf-8').strip()}\n```\n")

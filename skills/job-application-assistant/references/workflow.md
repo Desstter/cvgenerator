@@ -2,7 +2,7 @@
 
 ## Evaluación de la oferta
 
-Primero revisa condiciones excluyentes de la campaña: país desde el que se permite trabajar, ciudad presencial, modalidad, antigüedad máxima, disponibilidad, contrato y salario cuando está publicado. Un requisito desconocido se registra como desconocido y se resuelve antes de comprometer al candidato. Si no se publica salario, no se inventa una cifra ni se descarta automáticamente: aplica `unknown_salary_action`.
+Primero revisa condiciones excluyentes de la campaña: país desde el que se permite trabajar, ciudad presencial, modalidad, antigüedad máxima, disponibilidad, contrato y salario cuando está publicado. Registra las incógnitas y resuelve las que afecten la elegibilidad o exijan un compromiso. Cuando no se publica salario, `unknown_salary_action: "review"` indica revisar la oferta normalmente. Aplica cualquier límite salarial explícito cuando haya evidencia comparable.
 
 Conserva dos edades cuando difieran: fecha original en la descripción y fecha/republicación indicada por la plataforma. Para la campaña Colombia/Cali, los valores de ejemplo priorizan 7 días y aceptan hasta 14; otras campañas pueden cambiarlos. No confundas publicaciones antiguas con ofertas nuevas por su posición en la búsqueda.
 
@@ -42,9 +42,20 @@ Usa el umbral configurado para priorizar, explicando qué responsabilidades sí 
 
 ## Salario y costos
 
-Distingue salario publicado, expectativa del candidato y estimación de mercado. Si se solicita estimar salario, busca referencias recientes comparables por país, nivel, stack, horario y contrato; cita fuentes y expresa un rango con incertidumbre. Una moneda ambigua como `$` debe aclararse. Diferencia sueldo mensual/anual/por hora, bruto/neto y contrato laboral/contractor. No restes impuestos o aportes con cifras supuestas. Si se necesita conversión o normativa vigente, verifica una fuente actual.
+Distingue salario publicado, expectativa de negociación y remuneración actual o histórica. Para estas últimas usa un dato verificado y autorizado, o una opción de declinar que el portal acepte. Una estimación nunca demuestra cuánto gana o ganó la persona.
 
-Registra como costos del proceso el proveedor/modelo, si hubo refinamiento y el número de generaciones. No anuncies un costo exacto de API sin datos reales de uso y tarifas verificadas. Los portales que pidan pagar se detienen para decisión del usuario; no efectúes pagos por la autorización de postularse.
+### Expectativa salarial delegada
+
+Una expectativa verificada y aplicable en `application_answers.salary_expectation` tiene prioridad. Una instrucción explícita de la petición actual puede sustituirla. Si no hay cifra aplicable y `application_answers.salary_policy.mode` es `hire_first`, decide la propuesta siguiendo estos pasos.
+
+1. Si el formulario ofrece «Negociable» o admite texto, indica que la expectativa es negociable según el alcance del puesto y la compensación total, en el idioma del formulario. Si el campo pide un mínimo firme para aceptar una oferta, usa únicamente el mínimo autorizado o deja la decisión abierta con una opción válida. La delegación cubre propuestas de negociación.
+2. Si exige cifra, usa el rango publicado para esa vacante o el importe fijo anunciado. Con un rango, parte del primer cuartil (`mínimo + 0,25 × (máximo − mínimo)`). Elige una cifra redondeada en la parte baja compatible con el campo, el rango y los mínimos aplicables. Si exige un rango, usa la mitad inferior cuando sea compatible. Si el piso está por encima de la mitad, elige la cifra o intervalo admisible más bajo que aún quepa en el rango de referencia. Para un desplegable, compara las opciones por valor y elige la más cercana al objetivo que cumpla los límites.
+3. Sin salario publicado, consulta referencias recientes para puestos comparables por país del contrato, nivel, horario y tipo de contratación. Usa dos referencias independientes cuando existan y conserva sus enlaces, fechas y comparabilidad. Si solo hay una referencia reciente, úsala únicamente si publica un rango con comparabilidad clara. Aplica el mismo criterio al rango respaldado. Si ni la publicación ni la evidencia de mercado sostienen una cifra, registra esa limitación y continúa con otra oferta.
+4. Aplica `criteria.minimum_salary` y `application_answers.salary_policy.minimum` cuando sean pertinentes. Si ambos aplican, respeta el mayor. Normaliza moneda, período, tipo de remuneración y modalidad de contrato antes de comparar. Una cifra mensual bruta y una tarifa por hora en otro contrato no son directamente comparables. Verifica las conversiones necesarias con una fuente actual y confirma el sentido de un símbolo ambiguo como `$` en el propio formulario. Si el presupuesto publicado resulta incompatible con el mínimo, registra la incompatibilidad.
+
+`salary_policy.minimum` es `null` cuando el candidato no configuró un piso específico para la propuesta. Si se configura, usa un objeto con `value`, `currency`, `period` y, cuando corresponda, `basis` (bruto/neto) y `contract_type`. El modo `verified_only` o la ausencia de `salary_policy` mantiene el comportamiento de usar una cifra verificada o dejarla abierta cuando esté autorizado. Evita cifras simbólicas y remuneraciones supuestas. Para cada decisión delegada guarda pregunta, importe o texto, moneda, período, fuentes, criterio y la etiqueta `delegated` en la carpeta de la oferta. Reutilízala en esa oferta si permanecen iguales la pregunta, las unidades y las condiciones. Conserva su carácter de propuesta.
+
+Registra como costos del proceso el proveedor/modelo, si hubo refinamiento y el número de generaciones. Usa datos reales de uso y tarifas verificadas para informar un costo exacto. Si un portal exige pagar, registra el motivo y sigue con otras ofertas.
 
 ## Evaluación del CV
 
@@ -64,7 +75,14 @@ Antes de mejorar, escribe qué problema resolverá cada cambio. `revise` reutili
 
 ## Respuestas y memoria
 
-Cada respuesta reusable debe guardar pregunta, significado, respuesta, fuente, verificación y alcance. No uses la misma cifra para todas las tecnologías. Para referencias laborales, consentimiento de terceros, datos sensibles opcionales, pruebas técnicas, antecedentes o declaraciones legales, resuelve el caso concreto con el usuario y las reglas del entorno.
+Aplica en orden estas reglas a cada campo.
+
+1. Usa la respuesta verificada para la misma pregunta, alcance y período. Verifica la semántica después de traducir. Autorización de trabajo y necesidad de patrocinio son preguntas distintas. Diferencia disponibilidad para entrevista, fecha de inicio y preaviso. En inglés, conserva el nivel documentado y distingue comprensión de conversación.
+2. Deriva respuestas que se desprenden inequívocamente del perfil. Para años de experiencia, suma intervalos profesionales documentados para el puesto o la tecnología consultada, sin contar dos veces meses simultáneos. Usa el requisito literal para distinguir trabajo profesional, estudio y proyectos personales. Si solo está verificada una parte, usa una opción que esa evidencia sustente y que represente con fidelidad la respuesta. Una ausencia en el CV por sí sola deja la respuesta sin verificar.
+3. Redacta preguntas abiertas de interés, motivación o experiencia transferible con hechos de la oferta y del candidato. Usa una preferencia delegada, como expectativa negociable, dentro del alcance indicado. Cuando exista una opción veraz de «No aplica», «Desconocido» o «Prefiero no responder», selecciónala según el significado del campo.
+4. Omite campos opcionales sin evidencia o autorización. Si queda un campo obligatorio sin respuesta veraz, un compromiso nuevo o una prueba que exija actuación personal, conserva el avance y sigue con otras vacantes. Agrupa al final los bloqueos que compartan la misma causa.
+
+En el registro privado por oferta guarda pregunta, respuesta o impedimento, fuente, alcance y tipo (`verified`, `derived`, `delegated` o `unresolved`). Reutiliza hechos solo cuando el significado siga siendo equivalente. Retoma un caso pendiente al aparecer una respuesta, autorización o capacidad nueva, o si cambió el formulario.
 
 No solicites automáticamente documentos de identidad, datos bancarios, contraseñas u otra información que la etapa no necesite. No almacenes claves, OTP o contraseñas en la campaña, la skill o el registro. Usa sesiones autorizadas o el gestor de credenciales disponible.
 
