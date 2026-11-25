@@ -38,9 +38,6 @@
     "authorized_data_categories": [],
     "authorized_ai_provider": null,
     "submit_authorized": false,
-    "standard_application_terms_authorized": false,
-    "captcha": "request_user_when_needed",
-    "account_creation": "request_user_when_needed",
     "optional_marketing": false
   }
 }
